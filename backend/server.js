@@ -1,31 +1,29 @@
-// backend/server.js
+// backend/server.js (PostgreSQL)
 const express = require("express");
 const cors = require("cors");
-const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { Pool } = require("pg");
 
 const app = express();
 
-// For local dev allow all. On production, restrict to your frontend domain.
+// For now allow all (so Netlify can call it). Later you can restrict origin.
 app.use(cors());
 app.use(express.json());
 
-const db = new sqlite3.Database("./data.db");
+const JWT_SECRET = process.env.JWT_SECRET || "CHANGE_THIS";
+const DATABASE_URL = process.env.DATABASE_URL;
 
-// On Render you MUST set JWT_SECRET in Environment Variables.
-const JWT_SECRET = process.env.JWT_SECRET || "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET";
+if (!DATABASE_URL) {
+  console.error("Missing DATABASE_URL environment variable");
+  process.exit(1);
+}
 
-// Create users table if it doesn't exist
-db.run(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    created_at INTEGER NOT NULL
-  )
-`);
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  // Render Postgres commonly needs SSL
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+});
 
 function signToken(user) {
   return jwt.sign(
@@ -48,10 +46,21 @@ function auth(req, res, next) {
   }
 }
 
-// Health check
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at BIGINT NOT NULL
+    );
+  `);
+}
+
 app.get("/", (req, res) => res.send("VortexBoost API is running"));
 
-// REGISTER: username, email, password
+// Register
 app.post("/api/register", async (req, res) => {
   const { username, email, password } = req.body || {};
 
@@ -66,35 +75,34 @@ app.post("/api/register", async (req, res) => {
     const password_hash = await bcrypt.hash(password, 10);
     const created_at = Date.now();
 
-    db.run(
-      `INSERT INTO users (username, email, password_hash, created_at)
-       VALUES (?, ?, ?, ?)`,
-      [username.trim(), email.trim().toLowerCase(), password_hash, created_at],
-      function (err) {
-        if (err) {
-          if (err.message.includes("UNIQUE")) {
-            return res.status(409).json({ error: "Username or email already exists" });
-          }
-          return res.status(500).json({ error: "Database error" });
-        }
+    const q = `
+      INSERT INTO users (username, email, password_hash, created_at)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, username, email;
+    `;
 
-        const user = {
-          id: this.lastID,
-          username: username.trim(),
-          email: email.trim().toLowerCase(),
-        };
+    const result = await pool.query(q, [
+      username.trim(),
+      email.trim().toLowerCase(),
+      password_hash,
+      created_at,
+    ]);
 
-        const token = signToken(user);
-        return res.json({ token, user });
-      }
-    );
-  } catch {
+    const user = result.rows[0];
+    const token = signToken(user);
+    return res.json({ token, user });
+  } catch (err) {
+    // unique violation
+    if (err.code === "23505") {
+      return res.status(409).json({ error: "Username or email already exists" });
+    }
+    console.error(err);
     return res.status(500).json({ error: "Server error" });
   }
 });
 
-// LOGIN: identifier (email or username), password
-app.post("/api/login", (req, res) => {
+// Login
+app.post("/api/login", async (req, res) => {
   const { identifier, password } = req.body || {};
 
   if (!identifier || !password) {
@@ -103,27 +111,39 @@ app.post("/api/login", (req, res) => {
 
   const id = identifier.trim().toLowerCase();
 
-  db.get(
-    `SELECT * FROM users WHERE lower(username)=? OR lower(email)=?`,
-    [id, id],
-    async (err, row) => {
-      if (err) return res.status(500).json({ error: "Database error" });
-      if (!row) return res.status(401).json({ error: "Invalid credentials" });
+  try {
+    const result = await pool.query(
+      `SELECT * FROM users WHERE lower(username)=$1 OR lower(email)=$1 LIMIT 1`,
+      [id]
+    );
 
-      const ok = await bcrypt.compare(password, row.password_hash);
-      if (!ok) return res.status(401).json({ error: "Invalid credentials" });
+    const row = result.rows[0];
+    if (!row) return res.status(401).json({ error: "Invalid credentials" });
 
-      const user = { id: row.id, username: row.username, email: row.email };
-      const token = signToken(user);
-      return res.json({ token, user });
-    }
-  );
+    const ok = await bcrypt.compare(password, row.password_hash);
+    if (!ok) return res.status(401).json({ error: "Invalid credentials" });
+
+    const user = { id: row.id, username: row.username, email: row.email };
+    const token = signToken(user);
+    return res.json({ token, user });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
+  }
 });
 
-// ME: verify token
+// Verify token
 app.get("/api/me", auth, (req, res) => {
   res.json({ user: req.user });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+
+initDb()
+  .then(() => {
+    app.listen(PORT, () => console.log(`API running on port ${PORT}`));
+  })
+  .catch((e) => {
+    console.error("DB init failed:", e);
+    process.exit(1);
+  });
