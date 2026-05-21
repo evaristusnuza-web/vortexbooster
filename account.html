@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account</title>
+  <link rel="stylesheet" href="src/css/account.css">
+</head>
+
+<body>
+  <div class="nav">
+    <div class="logo">
+      <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+    </div>
+    <div class="nav-left">
+      <img src="./Public/Images/drop.png" alt="" class="image drop-icon">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <h1>create your free account</h1>
+
+      <div class="mid-top">
+        <div class="t1">
+          <img src="./Public/Images/fast.png" alt="#" class="img2">
+          <p class="p">Boost your Tiktok,Instagram and more instantly</p>
+        </div>
+        <div class="t2">
+          <img src="./Public/Images/internet.png" alt="#" class="image img2">
+          <p class="p">Reach a wider audience</p>
+        </div>
+        <div class="t3">
+          <img src="./Public/Images/like.png" alt="#" class="image img2">
+          <p class="p">40 million+ orders</p>
+        </div>
+      </div>
+
+      <div class="lines"></div>
+    </div>
+
+    <!-- FORM so submit works -->
+    <form class="inputs" id="registerForm" autocomplete="on">
+      <div class="mid">
+        <div class="input">
+          <input id="regUsername" type="text" class="name" placeholder="Username" required>
+        </div>
+
+        <div class="input">
+          <input id="regEmail" type="email" class="email" placeholder="You@example.com" required>
+        </div>
+
+        <div class="input">
+          <input id="regPassword" type="password" class="password" placeholder="Password" required>
+        </div>
+
+        <div class="input">
+          <input id="regConfirm" type="password" class="password" placeholder="Confirm your password" required>
+        </div>
+
+        <p id="regMsg" style="margin:10px 0 0; color:#c0392b; font-weight:600;"></p>
+      </div>
+
+      <div class="down">
+        <div class="btn">
+          <button type="submit" class="btn1">Create</button>
+        </div>
+
+        <div class="link">
+          <a href="login.html" class="links">Already have an account?<br><span class="log">login</span></a>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="main-bottom">
+    <h3 class="first">why <span class="sec">choose</span> <span class="third"> VortexBoost</span><span class="end">?</span></h3>
+    <div class="gallery">
+      <div class="cards">
+        <div class="top">
+          <img src="./Public/Images/thumbs.png" alt="#" class="image img3">
+        </div>
+        <div class="bottom">
+          <div class="line"></div>
+          <p>vortexboosters interface is as easy as ABC. rom account creation to making your first order.</p>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="top">
+          <img src="./Public/Images/rocket.png" alt="#" class="image img3">
+        </div>
+        <div class="bottom">
+          <div class="line"></div>
+          <p>Fast delivery and highly reliable services which give you the freedom to focus on other parts of your business.</p>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="top">
+          <img src="./Public/Images/support.png" alt="#" class="image img3">
+        </div>
+        <div class="bottom">
+          <div class="line"></div>
+          <p>Our friendly support team is always ready to assist you with any questions or concerns 24/7.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="src/js/account.js"></script>
+</body>
+</html>
