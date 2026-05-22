@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vortexboost</title>
+    <link rel="stylesheet" href="src/css/index.css">
+</head>
+<script>
+  // If user already has a token, send them to home.html
+  if (localStorage.getItem("token")) {
+    window.location.href = "home.html";
+  }
+</script>
+<body>
+ <div class="nav">
+        <div class="logo">
+            <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+        </div>
+        <div class="nav-left">
+        <img src="./Public/Images/drop.png" alt="" class="image drop-icon">
+        </div>
+    </div>
+    <div class="main">
+        <div class="main-top">
+            <img src="./Public/Images/hero.png" alt="hero image" class="image hero-img">
+            <h1 class="hero-title">Vortex <span class="text">boost</span></h1>
+            <h2 class="hero-desc">Boost your social media presence with Vortex Boost <br>fast,safe & trusted.</h2>
+            <p class="para">Draw in engagement and grow your audience with our powerful social media boosting tools.
+                <br> Vortex is the key. fast,safe and trusted
+            </p>
+        </div>
+        <div class="main-mid">
+            <div class="mid-top">
+                <div class="t1">
+                    <img src="./Public/Images/fast.png" alt="#" class="img2">
+                    <p class="p">Get likes, followers and more instantly</p>
+                </div>
+                <div class="t2">
+                    <img src="./public/Images/internet.png" alt="#" class="image img2">
+                    <p class="p">Reach a wider audience</p>
+                </div>
+                <div class="t3">
+                    <img src="./public/Images/like.png" alt="#" class="image img2">
+                    <p class="p">Trusted since 2024</p>
+                </div>
+            </div>
+            <div class="mid-bottom">
+                <button class="button btn1"><a href="account.html" class="link">create account</a></button>
+                <h3 class="dev">
+                    <div class="line2"></div>OR <div class="line1"></div>
+                </h3>
+                <button class="button btn2"><a href="login.html" class="link">login</a></button>
+            </div>
+        </div>
+        <div class="main-bottom">
+            <h3 class="first">why <span class="sec">choose</span> <span class="third"> VortexBoost</span><span
+                    class="end">?</span></h3>
+            <div class="gallery">
+                <div class="cards">
+                    <div class="top">
+                        <img src="./public/Images/thumbs.png" alt="#" class="image img3">
+                    </div>
+                    <div class="bottom">
+                        <div class="line"></div>
+                        <p>vortexboosters interface is as easy as ABC. rom account creation to making your first order.
+                        </p>
+                    </div>
+                </div>
+                <div class="cards">
+                    <div class="top">
+                        <img src="./public/Images/rocket.png" alt="#" class="image img3">
+                    </div>
+                    <div class="bottom">
+                        <div class="line"></div>
+                        <p>Fast delivery and highly reliable services which give you the freedom to focus on other parts
+                            of your business.</p>
+                    </div>
+                </div>
+                <div class="cards">
+                    <div class="top">
+                        <img src="./public/Images/support.png" alt="#" class="image img3">
+                    </div>
+                    <div class="bottom">
+                        <div class="line"></div>
+                        <p>Our friendly support team is always ready to assist you with any questions or concerns 24/7.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
