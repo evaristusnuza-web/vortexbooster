@@ -22,7 +22,7 @@
 
         <div class="brand">
           <div class="logo">
-            <img src="Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+            <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
           </div>
         </div>
       </div>
@@ -69,27 +69,27 @@
 
       <div class="tabs" role="tablist" aria-label="Platforms">
         <button class="tab is-active" role="tab" aria-selected="true" data-tab="tiktok">
-          <span class="iconSlot" aria-hidden="true"><img src="Public/Images/tiktok.png" alt=""></span>
+          <span class="iconSlot" aria-hidden="true"><img src="./Public/Images/tiktok.png" alt=""></span>
         </button>
 
         <button class="tab" role="tab" aria-selected="false" data-tab="instagram">
-          <span class="iconSlot" aria-hidden="true"><img src="Public/Images/instagram.png" alt=""></span>
+          <span class="iconSlot" aria-hidden="true"><img src="./Public/Images/instagram.png" alt=""></span>
         </button>
 
         <button class="tab" role="tab" aria-selected="false" data-tab="facebook">
-          <span class="iconSlot" aria-hidden="true"><img src="Public/Images/facebook.png" alt=""></span>
+          <span class="iconSlot" aria-hidden="true"><img src="./Public/Images/facebook.png" alt=""></span>
         </button>
 
         <button class="tab" role="tab" aria-selected="false" data-tab="telegram">
-          <span class="iconSlot" aria-hidden="true"><img src="Public/Images/telegram.png" alt=""></span>
+          <span class="iconSlot" aria-hidden="true"><img src="./Public/Images/telegram.png" alt=""></span>
         </button>
 
         <button class="tab" role="tab" aria-selected="false" data-tab="youtube">
-          <span class="iconSlot" aria-hidden="true"><img src="Public/Images/youtube.png" alt=""></span>
+          <span class="iconSlot" aria-hidden="true"><img src="./Public/Images/youtube.png" alt=""></span>
         </button>
 
         <button class="tab" role="tab" aria-selected="false" data-tab="whatsapp">
-          <span class="iconSlot" aria-hidden="true"><img src="Public/Images/whatsapp.png" alt=""></span>
+          <span class="iconSlot" aria-hidden="true"><img src="./Public/Images/whatsapp.png" alt=""></span>
         </button>
 
         <button class="tab tab--more" role="tab" aria-selected="false" data-tab="more">
@@ -104,6 +104,8 @@
         <!-- SERVICE -->
         <div class="field">
           <label class="label" for="serviceSelect">Service:</label>
+
+          <!-- native select kept for value storage/accessibility (hidden by CSS) -->
           <select class="control" id="serviceSelect"></select>
 
           <!-- custom rich picker trigger -->
@@ -116,6 +118,8 @@
         <!-- TYPE -->
         <div class="field">
           <label class="label" for="typeSelect">Type:</label>
+
+          <!-- native select kept for value storage/accessibility (hidden by CSS) -->
           <select class="control" id="typeSelect"></select>
 
           <!-- custom rich picker trigger -->
@@ -124,7 +128,7 @@
             <span class="pickCaret">▾</span>
           </button>
 
-          <!-- optional preview box -->
+          <!-- optional preview box (filled by JS) -->
           <div class="typePreview" id="typePreview" hidden></div>
         </div>
 
@@ -141,6 +145,7 @@
           <div class="mini" id="qtyHint"></div>
         </div>
 
+        <!-- PRICE / TIME -->
         <div class="twoCols">
           <div class="priceBox">
             <div class="label">Price:</div>
@@ -154,6 +159,7 @@
           </div>
         </div>
 
+        <!-- NOTES -->
         <div class="field">
           <div class="label">Note:</div>
           <div class="noteCard">
