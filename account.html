@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -53,28 +54,43 @@
         <div class="input">
           <input id="regPassword" type="password" class="password" placeholder="Password" required>
         </div>
-
-        <div class="input">
-          <input id="regConfirm" type="password" class="password" placeholder="Confirm your password" required>
-        </div>
-
-        <p id="regMsg" style="margin:10px 0 0; color:#c0392b; font-weight:600;"></p>
-      </div>
-
-      <div class="down">
-        <div class="btn">
-          <button type="submit" class="btn1">Create</button>
-        </div>
-
-        <div class="link">
-          <a href="login.html" class="links">Already have an account?<br><span class="log">login</span></a>
+          <div class="input">
+        <div class="password-field">
+          <input id="pw" type="password" class="password" placeholder="password" required />
+          <button id="pwToggle" type="button" class="toggle-pass" aria-label="Show password">👁</button>
         </div>
       </div>
-    </form>
+      <script>
+        const pw = document.getElementById("pw");
+        const btn = document.getElementById("pwToggle");
+
+        btn.addEventListener("click", () => {
+          pw.type = pw.type === "password" ? "text" : "password";
+          btn.textContent = pw.type === "password" ? "👁" : "🙈";
+          console.log("toggled to:", pw.type);
+        });
+      </script>
+      </div>
+
+    
+      <p id="regMsg" style="margin:10px 0 0; color:#c0392b; font-weight:600;"></p>
+  </div>
+
+  <div class="down">
+    <div class="btn">
+      <button type="submit" class="btn1">Create</button>
+    </div>
+
+    <div class="link">
+      <a href="login.html" class="links">Already have an account?<br><span class="log">login</span></a>
+    </div>
+  </div>
+  </form>
   </div>
 
   <div class="main-bottom">
-    <h3 class="first">why <span class="sec">choose</span> <span class="third"> VortexBoost</span><span class="end">?</span></h3>
+    <h3 class="first">why <span class="sec">choose</span> <span class="third"> VortexBoost</span><span
+        class="end">?</span></h3>
     <div class="gallery">
       <div class="cards">
         <div class="top">
@@ -92,7 +108,8 @@
         </div>
         <div class="bottom">
           <div class="line"></div>
-          <p>Fast delivery and highly reliable services which give you the freedom to focus on other parts of your business.</p>
+          <p>Fast delivery and highly reliable services which give you the freedom to focus on other parts of your
+            business.</p>
         </div>
       </div>
 
@@ -110,4 +127,5 @@
 
   <script src="src/js/account.js"></script>
 </body>
+
 </html>
