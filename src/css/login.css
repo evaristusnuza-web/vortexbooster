@@ -456,3 +456,25 @@ img {
     padding: 0 10px 12px;
   }
 }
+/* =========================
+   Password show/hide toggle
+   ========================= */
+.password-field{
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-field input{
+  width: 100%;
+  padding-right: 46px;
+}
+.toggle-pass{
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 6px;
+  line-height: 1;
+}

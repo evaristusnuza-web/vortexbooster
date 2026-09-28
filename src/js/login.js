@@ -13,7 +13,7 @@ form.addEventListener("submit", async (e) => {
   msg.textContent = "";
 
   const identifier = document.getElementById("loginIdentifier").value.trim();
-  const password = document.getElementById("loginPassword").value;
+  const password = document.getElementById("pw").value;
 
   try {
     const res = await fetch(`${API_BASE}/api/login`, {

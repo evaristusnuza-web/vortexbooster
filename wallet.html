@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Wallet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/home.css" />
+  <link rel="stylesheet" href="src/css/pages.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="topbar__left">
+        <button class="hamburger" type="button" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="brand">
+          <div class="logo">
+            <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+          </div>
+        </div>
+      </div>
+      <div class="topbar__right">
+        <div class="balance">
+          <a href="payment.html" class="lik" title="Add funds"><span class="balance__plus">+</span></a>
+          <span class="balance__amt">0 XAF</span>
+        </div>
+        <button class="lang" type="button">EN <span class="caret">▼</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <!-- HERO BALANCE -->
+    <div class="balanceHero">
+      <div class="balanceHero__label">Available balance</div>
+      <div class="balanceHero__amt" id="heroBalance">0 XAF</div>
+      <a href="payment.html" class="balanceHero__btn">Add Funds</a>
+    </div>
+
+    <!-- AFFILIATE BALANCE -->
+    <a href="referral.html" class="affBar">
+      <span>Affiliate balance: <b id="affBalance">0 XAF</b></span>
+      <span class="affBar__arrow">&gt;</span>
+    </a>
+
+    <!-- OWNER MARGIN (visible to the site owner only) -->
+    <div class="card" id="ownerCard" hidden>
+      <h2 class="cardTitle mt0">Owner dashboard</h2>
+      <div class="ownerCard">
+        <div class="ownerCard__item">
+          <div class="ownerCard__k">Total deposits</div>
+          <div class="ownerCard__v" id="ownDeposits">0 XAF</div>
+        </div>
+        <div class="ownerCard__item">
+          <div class="ownerCard__k">Provider cost (Simmwiz)</div>
+          <div class="ownerCard__v" id="ownCost">0 XAF</div>
+        </div>
+        <div class="ownerCard__item">
+          <div class="ownerCard__k">Net margin (yours)</div>
+          <div class="ownerCard__v pos" id="ownMargin">0 XAF</div>
+        </div>
+      </div>
+      <p class="muted small" style="margin:12px 0 0">Margin = what customers paid for orders − what Simmwiz charged you. It stays in your pocket.</p>
+    </div>
+
+    <!-- RECENT ACTIVITIES -->
+    <h2 class="txTitle">Recent activities</h2>
+    <div class="txList" id="txList"></div>
+    <div class="loadMoreWrap" id="loadMoreWrap" hidden>
+      <button class="loadMore" id="loadMoreBtn" type="button">Load more</button>
+    </div>
+    <p class="noMore center" id="noMore" hidden>No more data to load.</p>
+
+    <div class="guideFooter">
+      Need help using the VortexBoost website?<br>
+      Watch this video : <a href="support.html">Guide</a>
+    </div>
+  </main>
+
+  <footer class="footerDark">© 2026 VortexBoost. All rights reserved.</footer>
+
+  <script src="src/js/config.js"></script>
+  <script src="src/js/app-shell.js"></script>
+  <script src="src/js/wallet.js"></script>
+</body>
+</html>

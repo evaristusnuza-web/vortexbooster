@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/home.css" />
+  <link rel="stylesheet" href="src/css/pages.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="topbar__left">
+        <button class="hamburger" type="button" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="brand">
+          <div class="logo">
+            <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+          </div>
+        </div>
+      </div>
+      <div class="topbar__right">
+        <div class="balance">
+          <a href="payment.html" class="lik" title="Add funds"><span class="balance__plus">+</span></a>
+          <span class="balance__amt">0 XAF</span>
+        </div>
+        <button class="lang" type="button">EN <span class="caret">▼</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="card">
+      <h2 class="cardTitle mt0">Your API key</h2>
+      <p class="muted" style="margin-top:0">Place and track orders programmatically. Orders use the same prices and are charged to your wallet, exactly like the website.</p>
+
+      <div class="keyBox">
+        <span id="apiKeyText" class="placeholder">No API key yet</span>
+      </div>
+
+      <div class="refActions" style="justify-content:flex-start;margin-top:14px">
+        <button class="btnGhost" type="button" id="genKeyBtn">Generate new key</button>
+        <button class="btnGhost" type="button" id="copyKeyBtn" hidden>Copy key</button>
+        <button class="btnGhost" type="button" id="revokeKeyBtn" hidden style="color:#c0392b;border-color:rgba(192,57,43,.4)">Revoke</button>
+      </div>
+      <p class="muted small" style="margin-top:10px">⚠️ Keep your key secret. Anyone with it can spend your wallet balance.</p>
+    </div>
+
+    <div class="card apiDocs">
+      <h2 class="cardTitle mt0">How to use the API</h2>
+      <p>Base URL: <b id="apiBase"></b><br>
+      Authentication: send your key in the <b>X-Api-Key</b> header.</p>
+
+      <h3>1. List services</h3>
+      <p>Each service key looks like <code>platform.service.type</code> (e.g. <code>tiktok.followers.avg</code>).</p>
+<pre>curl "https://YOUR_API/api/public/services" -H "X-Api-Key: YOUR_KEY"</pre>
+
+      <h3>2. Check your balance</h3>
+<pre>curl "https://YOUR_API/api/public/balance" -H "X-Api-Key: YOUR_KEY"</pre>
+
+      <h3>3. Add an order</h3>
+<pre>curl "https://YOUR_API/api/public/add" -X POST \
+  -H "X-Api-Key: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "service": "tiktok.followers.avg", "link": "https://tiktok.com/@yourname", "quantity": 500 }'</pre>
+
+      <h3>4. Check order status</h3>
+<pre>curl "https://YOUR_API/api/public/status?order=123" -H "X-Api-Key: YOUR_KEY"</pre>
+
+      <p>Status values: <b>pending</b> → <b>completed</b> (or <b>canceled</b>, which is refunded automatically).</p>
+    </div>
+
+    <div class="guideFooter">
+      Need help using the VortexBoost website?<br>
+      Watch this video : <a href="support.html">Guide</a>
+    </div>
+  </main>
+
+  <footer class="footerDark">© 2026 VortexBoost. All rights reserved.</footer>
+
+  <script src="src/js/config.js"></script>
+  <script src="src/js/app-shell.js"></script>
+  <script src="src/js/api-page.js"></script>
+</body>
+</html>

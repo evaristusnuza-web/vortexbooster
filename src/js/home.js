@@ -1,25 +1,28 @@
-const API_BASE = "https://vortexbooster-3.onrender.com";
+const API_BASE = window.API_BASE || "";
 
 /* ===========================
-   AUTH GUARD (run immediately)
+   AUTH GUARD + BOOT
+   (app-shell.js provides VB.requireLogin / VB.initShell)
    =========================== */
-(async function requireLogin() {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    window.location.href = "index.html";
+VB.requireLogin().then((ok) => {
+  if (!ok) return;
+  VB.initShell();
+  bootHome();
+});
+
+async function bootHome() {
+  try {
+    CATALOG = await VB.api("/api/catalog");
+  } catch (e) {
+    const panel = document.querySelector(".panel");
+    if (panel) panel.innerHTML = "<p style='text-align:center;color:#c0392b;font-weight:700'>Could not load the services catalog.<br>Please check your connection and reload.</p>";
     return;
   }
-
-  try {
-    const res = await fetch(`${API_BASE}/api/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) throw new Error("unauthorized");
-  } catch {
-    localStorage.removeItem("token");
-    window.location.href = "index.html";
-  }
-})();
+  syncNativeSelects();
+  applyToForm();
+  wirePurchase();
+  loadHomeWallet();
+}
 
 /* ===========================
    Tabs + Notch (UNCHANGED)
@@ -176,194 +179,7 @@ function withFollowerExplanation(serviceKey, notes) {
    CATALOG (services + types)
    pricePer1k is per TYPE
    =========================== */
-const CATALOG = {
-  tiktok: {
-    linkLabel: "Tiktok account link:",
-    services: {
-      followers: {
-        label: "Followers",
-        types: {
-          avg: {
-            label: "Average Quality Followers",
-            pricePer1k: 3200,
-            time: "2 Hours",
-            qty: { min: 100, max: 100000 },
-            notes: [
-              "Make sure the Tiktok account is not private, and dont change the accounts username while followers are been added !",
-              "Almost no drop in followers!",
-              "Average quality means a shorter guarantee length, semi-real looking accounts/engagements, and average drops"
-            ]
-          },
-          high: {
-            label: "High Quality Followers",
-            pricePer1k: 4800,
-            time: "1 Hour",
-            qty: { min: 100, max: 50000 },
-            notes: [
-              "Account must not be private.",
-              "Higher quality profiles, lower drop rate."
-            ]
-          }
-        }
-      },
-      video_likes: {
-        label: "Video Likes",
-        types: {
-          fast: { label: "Fast Likes", pricePer1k: 900, time: "30 Min", qty: { min: 50, max: 200000 }, notes: ["Video must be public."] },
-          hq: { label: "HQ Likes", pricePer1k: 1400, time: "1 Hour", qty: { min: 50, max: 100000 }, notes: ["Higher retention than fast likes."] }
-        }
-      },
-      video_views: {
-        label: "Video Views",
-        types: {
-          normal: { label: "Normal Views", pricePer1k: 180, time: "Instant", qty: { min: 1000, max: 20000000 }, notes: ["Starts quickly."] },
-          targeted: { label: "Targeted Views", pricePer1k: 420, time: "1-3 Hours", qty: { min: 1000, max: 5000000 }, notes: ["Better engagement ratio."] }
-        }
-      },
-      saves: {
-        label: "Video Saves",
-        types: {
-          standard: { label: "Standard Saves", pricePer1k: 700, time: "1-2 Hours", qty: { min: 50, max: 100000 }, notes: ["Video must be public."] }
-        }
-      },
-      shares: {
-        label: "Video Shares",
-        types: {
-          standard: { label: "Standard Shares", pricePer1k: 800, time: "1-2 Hours", qty: { min: 50, max: 100000 }, notes: ["Video must be public."] }
-        }
-      }
-    }
-  },
-
-  instagram: {
-    linkLabel: "Instagram account / post link:",
-    services: {
-      followers: {
-        label: "Followers",
-        types: {
-          avg: { label: "Average Quality Followers", pricePer1k: 960, time: "1 Hour", qty: { min: 50, max: 1000000 }, notes: ["Profile must not be private."] },
-          high: { label: "High Quality Followers", pricePer1k: 1600, time: "2 Hours", qty: { min: 50, max: 500000 }, notes: ["Lower drop than average."] }
-        }
-      },
-      post_likes: {
-        label: "Post Likes",
-        types: {
-          fast: { label: "Fast Likes", pricePer1k: 700, time: "30 Min", qty: { min: 50, max: 500000 }, notes: ["Post must be public."] },
-          hq: { label: "HQ Likes", pricePer1k: 1200, time: "1 Hour", qty: { min: 50, max: 200000 }, notes: ["Higher retention."] }
-        }
-      },
-      reel_views: {
-        label: "Video/Reel Views",
-        types: {
-          views: { label: "Reel Views", pricePer1k: 160, time: "Instant", qty: { min: 1000, max: 20000000 }, notes: ["Reel must be public."] }
-        }
-      },
-      story_views: {
-        label: "Story Views",
-        types: {
-          story: { label: "Story Views", pricePer1k: 520, time: "1 Hour", qty: { min: 100, max: 50000 }, notes: ["Story must be active."] }
-        }
-      }
-    }
-  },
-
-  facebook: {
-    linkLabel: "Page Link:",
-    services: {
-      page_followers: {
-        label: "Page Followers",
-        types: {
-          avg: { label: "Average Quality Followers", pricePer1k: 800, time: "2 Hours", qty: { min: 100, max: 500000 }, notes: ["If there is a Facebook update then your order might take longer than usual."] },
-          high: { label: "High Quality Followers", pricePer1k: 1300, time: "3-6 Hours", qty: { min: 100, max: 200000 }, notes: ["Higher retention."] }
-        }
-      },
-      post_likes: {
-        label: "Post Likes",
-        types: {
-          likes: { label: "Post Likes", pricePer1k: 900, time: "1-2 Hours", qty: { min: 50, max: 200000 }, notes: ["Post must be public."] }
-        }
-      }
-    }
-  },
-
-  telegram: {
-    linkLabel: "Group/Channel Link:",
-    services: {
-      members: {
-        label: "Group/Channel Members",
-        types: {
-          avg: {
-            label: "Average Quality Members",
-            pricePer1k: 1120,
-            time: "2 Hours",
-            qty: { min: 500, max: 100000 },
-            notes: [
-              "If your telegram channel link does not start with https:// then kindly add it to the begining of the link before you purchase or your order will be cancelled !",
-              "Don't change the channel/group username while members are been added !",
-              "There's no drop in members !"
-            ]
-          },
-          hq: { label: "HQ Members", pricePer1k: 1900, time: "3-6 Hours", qty: { min: 500, max: 50000 }, notes: ["Higher quality members."] }
-        }
-      },
-      post_views_specific: {
-        label: "Post Views (Specific Post)",
-        types: {
-          views: { label: "Post Views", pricePer1k: 240, time: "Instant", qty: { min: 1000, max: 2000000 }, notes: ["Use the post link."] }
-        }
-      }
-    }
-  },
-
-  youtube: {
-    linkLabel: "Youtube channel link:",
-    services: {
-      subscribers: {
-        label: "Subscribers",
-        types: {
-          avg: { label: "Average Quality Subscribers", pricePer1k: 25600, time: "24 Hours", qty: { min: 50, max: 50000 }, notes: ["Expect 1-5% drop."] },
-          high: { label: "High Quality Subscribers", pricePer1k: 34000, time: "24-48 Hours", qty: { min: 50, max: 25000 }, notes: ["Better retention."] }
-        }
-      },
-      views: {
-        label: "Views",
-        types: {
-          views: { label: "Video Views", pricePer1k: 900, time: "1-6 Hours", qty: { min: 1000, max: 5000000 }, notes: ["Video must be public."] }
-        }
-      }
-    }
-  },
-
-  whatsapp: {
-    linkLabel: "Whatsapp Channel Link:",
-    services: {
-      channel_followers: {
-        label: "Channel Followers",
-        types: {
-          global: { label: "Global Followers", pricePer1k: 2240, time: "3 Hours", qty: { min: 20, max: 10000 }, notes: ["Followers will be from random countries !"] }
-        }
-      },
-      channel_reactions: {
-        label: "Channel Emoji Reactions",
-        types: {
-          react: { label: "Emoji Reactions", pricePer1k: 1800, time: "1-2 Hours", qty: { min: 50, max: 100000 }, notes: ["Depends on availability."] }
-        }
-      }
-    }
-  },
-
-  more: {
-    linkLabel: "Link:",
-    services: {
-      custom: {
-        label: "Custom Service",
-        types: {
-          custom: { label: "Custom Type", pricePer1k: 0, time: "—", qty: { min: 1, max: 1000000 }, notes: ["Add your custom services here."] }
-        }
-      }
-    }
-  }
-};
+let CATALOG = null; // loaded from /api/catalog (single source of truth: catalog.json on the server)
 
 let activeKey = "tiktok";
 let activeServiceKey = null;
@@ -506,6 +322,7 @@ function updatePrice() {
    =========================== */
 tabs.forEach(btn => {
   btn.addEventListener("click", () => {
+    if (!CATALOG) return; // catalog still loading
     activeKey = btn.dataset.tab;
     syncNativeSelects();
     applyToForm();
@@ -514,6 +331,7 @@ tabs.forEach(btn => {
 
 if (servicePick) {
   servicePick.addEventListener("click", () => {
+    if (!CATALOG) return;
     openSheet({
       title: "Select a service.",
       hint: "Choose a service",
@@ -538,6 +356,7 @@ if (servicePick) {
 
 if (typePick) {
   typePick.addEventListener("click", () => {
+    if (!CATALOG || !activeServiceKey) return;
     openSheet({
       title: "Select a type.",
       hint: "Choose a type (price/time depends on type)",
@@ -573,89 +392,88 @@ qtyInput.addEventListener("input", updatePrice);
 window.addEventListener("resize", drawNotch);
 
 /* ===========================
-   Init
+   PURCHASE (real orders via the API)
    =========================== */
-syncNativeSelects();
-applyToForm();
+function wirePurchase() {
+  const purchaseBtn = document.querySelector(".purchaseBtn");
+  if (!purchaseBtn) return;
+  const orderMsg = document.getElementById("orderMsg");
+
+  purchaseBtn.addEventListener("click", async () => {
+    orderMsg.classList.remove("show", "msg--error", "msg--success");
+
+    if (!activeServiceKey || !activeTypeKey) {
+      orderMsg.textContent = "Please select a service and a type first.";
+      orderMsg.classList.add("show", "msg--error");
+      return;
+    }
+    const d = getTypeData();
+    const link = linkInput.value.trim();
+    const qty = Number(qtyInput.value || 0);
+
+    if (!/^https?:\/\/.+\..+/i.test(link)) {
+      orderMsg.textContent = "Enter a valid link (must start with http:// or https://).";
+      orderMsg.classList.add("show", "msg--error");
+      return;
+    }
+    if (!d.pricePer1k || d.pricePer1k <= 0) {
+      orderMsg.textContent = "This service is not available yet.";
+      orderMsg.classList.add("show", "msg--error");
+      return;
+    }
+    if (!Number.isFinite(qty) || qty < d.qty.min || qty > d.qty.max) {
+      orderMsg.textContent = `Quantity must be between ${formatNum(d.qty.min)} and ${formatNum(d.qty.max)}.`;
+      orderMsg.classList.add("show", "msg--error");
+      return;
+    }
+
+    purchaseBtn.disabled = true;
+    const oldText = purchaseBtn.textContent;
+    purchaseBtn.textContent = "PROCESSING...";
+
+    try {
+      const data = await VB.api("/api/orders", {
+        method: "POST",
+        body: JSON.stringify({
+          platform: activeKey,
+          service: activeServiceKey,
+          type: activeTypeKey,
+          link,
+          qty
+        })
+      });
+      orderMsg.innerHTML = `Order #${data.order.id} placed successfully! Track its progress in <a href="orders.html" class="linkBtn">Orders</a>.`;
+      orderMsg.classList.add("show", "msg--success");
+      qtyInput.value = "";
+      updatePrice();
+      VB.refreshBalance();
+    } catch (e) {
+      if (e.status === 402) {
+        orderMsg.innerHTML = `${VB.esc(e.message)} &nbsp;<a href="payment.html" class="linkBtn">Add funds</a>`;
+      } else {
+        orderMsg.textContent = e.message || "Something went wrong. Please try again.";
+      }
+      orderMsg.classList.add("show", "msg--error");
+    } finally {
+      purchaseBtn.disabled = false;
+      purchaseBtn.textContent = oldText;
+    }
+  });
+}
 
 /* ===========================
-   Slide-in menu + logout (UNCHANGED)
+   Live wallet stats (spent + balance)
    =========================== */
-(() => {
-  const hamburger = document.querySelector(".hamburger");
-  if (!hamburger) return;
+function loadHomeWallet() {
+  VB.api("/api/wallet").then((data) => {
+    const spent = document.getElementById("statSpent");
+    const bal = document.getElementById("statBalance");
+    if (spent) spent.textContent = VB.fmtXAF(data.totalSpent);
+    if (bal) bal.textContent = VB.fmtXAF(data.balance);
+  }).catch(() => { /* offline: keep defaults */ });
+}
 
-  const links = [
-    { label: "Home", href: "home.html" },
-    { label: "Orders", href: "orders.html" },
-    { label: "Wallet", href: "wallet.html" },
-    { label: "Account", href: "account.html" },
-    { label: "Terms", href: "terms.html" },
-    { label: "Support", href: "support.html" }
-  ];
-
-  const overlay = document.createElement("div");
-  overlay.className = "menuOverlay";
-  overlay.setAttribute("aria-hidden", "true");
-
-  const nav = document.createElement("nav");
-  nav.className = "sideMenu";
-  nav.id = "sideMenu";
-  nav.setAttribute("aria-label", "Sidebar");
-
-  const current = (location.pathname.split("/").pop() || "home.html").toLowerCase();
-
-  nav.innerHTML = `
-    <ul class="sideMenu__list">
-      ${links.map(({label, href}) => `
-        <li class="sideMenu__item ${href.toLowerCase() === current ? "is-active" : ""}">
-          <a class="sideMenu__link" href="${href}">${label}</a>
-        </li>
-      `).join("")}
-    </ul>
-    <div class="sideMenu__footer">
-      <button class="sideMenu__signout" type="button">SIGN OUT</button>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-  document.body.appendChild(nav);
-
-  hamburger.setAttribute("aria-controls", "sideMenu");
-  hamburger.setAttribute("aria-expanded", "false");
-
-  const open = () => {
-    nav.classList.add("is-open");
-    overlay.classList.add("is-open");
-    document.body.classList.add("menu-open");
-    hamburger.setAttribute("aria-expanded", "true");
-  };
-
-  const close = () => {
-    nav.classList.remove("is-open");
-    overlay.classList.remove("is-open");
-    document.body.classList.remove("menu-open");
-    hamburger.setAttribute("aria-expanded", "false");
-  };
-
-  hamburger.addEventListener("click", () => {
-    nav.classList.contains("is-open") ? close() : open();
-  });
-
-  overlay.addEventListener("click", close);
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") close();
-  });
-
-  nav.addEventListener("click", (e) => {
-    const a = e.target.closest("a");
-    if (a) close();
-  });
-
-  nav.querySelector(".sideMenu__signout")?.addEventListener("click", () => {
-    localStorage.removeItem("token");
-    close();
-    window.location.href = "index.html";
-  });
-})();
+/* ===========================
+   Slide-in menu + logout
+   (now handled by app-shell.js -> VB.initShell())
+   =========================== */

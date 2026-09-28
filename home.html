@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="src/css/home.css" />
+  <link rel="stylesheet" href="src/css/pages.css" />
 </head>
 
 <body>
@@ -29,7 +30,7 @@
 
       <div class="topbar__right">
         <div class="balance">
-          <a href="funds.html" class="lik"><span class="balance__plus">+</span></a>
+          <a href="payment.html" class="lik" title="Add funds"><span class="balance__plus">+</span></a>
           <span class="balance__amt">0 XAF</span>
         </div>
         <button class="lang" type="button">
@@ -56,8 +57,8 @@
         <div class="statsCard__icon statsCard__icon--pink">$</div>
         <div class="statsCard__text">
           <div class="statsCard__k">You Have Spent</div>
-          <div class="statsCard__v">0 XAF</div>
-          <div class="statsCard__s">You currently have<br /><b>0 XAF</b></div>
+          <div class="statsCard__v" id="statSpent">0 XAF</div>
+          <div class="statsCard__s">You currently have<br /><b id="statBalance">0 XAF</b></div>
         </div>
       </div>
     </section>
@@ -195,6 +196,10 @@
     </div>
   </div>
 
+  <p id="orderMsg" class="msg" style="text-align:center"></p>
+
+  <script src="src/js/config.js"></script>
+  <script src="src/js/app-shell.js"></script>
   <script src="src/js/home.js"></script>
 </body>
 </html>

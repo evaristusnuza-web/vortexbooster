@@ -1,131 +1,106 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Account</title>
-  <link rel="stylesheet" href="src/css/account.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/home.css" />
+  <link rel="stylesheet" href="src/css/pages.css" />
 </head>
-
 <body>
-  <div class="nav">
-    <div class="logo">
-      <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
-    </div>
-    <div class="nav-left">
-      <img src="./Public/Images/drop.png" alt="" class="image drop-icon">
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="top">
-      <h1>create your free account</h1>
-
-      <div class="mid-top">
-        <div class="t1">
-          <img src="./Public/Images/fast.png" alt="#" class="img2">
-          <p class="p">Boost your Tiktok,Instagram and more instantly</p>
-        </div>
-        <div class="t2">
-          <img src="./Public/Images/internet.png" alt="#" class="image img2">
-          <p class="p">Reach a wider audience</p>
-        </div>
-        <div class="t3">
-          <img src="./Public/Images/like.png" alt="#" class="image img2">
-          <p class="p">40 million+ orders</p>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="topbar__left">
+        <button class="hamburger" type="button" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="brand">
+          <div class="logo">
+            <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+          </div>
         </div>
       </div>
+      <div class="topbar__right">
+        <div class="balance">
+          <a href="payment.html" class="lik" title="Add funds"><span class="balance__plus">+</span></a>
+          <span class="balance__amt">0 XAF</span>
+        </div>
+        <button class="lang" type="button">EN <span class="caret">▼</span></button>
+      </div>
+    </div>
+  </header>
 
-      <div class="lines"></div>
+  <main class="page">
+    <!-- ACCOUNT DETAILS -->
+    <div class="card">
+      <div class="acctHead">
+        <h2>Account Details</h2>
+        <button class="signoutBtn" type="button" id="signoutBtn">SIGN OUT</button>
+      </div>
+
+      <div class="acctRow">
+        <span class="k">Username:</span>
+        <span class="v" id="acctUsername">—</span>
+        <button class="editBtn" type="button" id="editUsernameBtn" title="Change username">✏️</button>
+        <input class="control" id="newUsernameInput" type="text" style="display:none;width:200px" maxlength="30">
+        <button class="btnGhost" type="button" id="saveUsernameBtn" style="display:none">Save</button>
+      </div>
+
+      <div class="acctRow">
+        <span class="k">Email:</span>
+        <span class="v" id="acctEmail">—</span>
+        <span class="badge" id="emailBadge">Email Verified</span>
+      </div>
+
+      <div class="discountBox">
+        Current Discount Applied: <b>None</b><br>
+        Discount Uses Left: <b>0</b>
+      </div>
     </div>
 
-    <!-- FORM so submit works -->
-    <form class="inputs" id="registerForm" autocomplete="on">
-      <div class="mid">
-        <div class="input">
-          <input id="regUsername" type="text" class="name" placeholder="Username" required>
-        </div>
+    <!-- COUNTRY -->
+    <div class="card">
+      <h2 class="cardTitle mt0">Current Country:</h2>
+      <div class="countryRow">
+        <span style="font-size:20px">🌐</span>
+        <select id="countrySelect" aria-label="Country"></select>
+      </div>
+    </div>
 
-        <div class="input">
-          <input id="regEmail" type="email" class="email" placeholder="You@example.com" required>
-        </div>
-
-        <div class="input">
-          <input id="regPassword" type="password" class="password" placeholder="Password" required>
-        </div>
-          <div class="input">
+    <!-- SECURITY -->
+    <div class="card">
+      <h2 class="cardTitle mt0">Security</h2>
+      <div class="secInputs">
         <div class="password-field">
-          <input id="pw" type="password" class="password" placeholder="password" required />
-          <button id="pwToggle" type="button" class="toggle-pass" aria-label="Show password">👁</button>
+          <input class="control" id="curPass" type="password" placeholder="Current Password">
+          <button class="toggle-pass" type="button" data-toggles="curPass" aria-label="Show password">👁</button>
+        </div>
+        <div class="password-field">
+          <input class="control" id="newPass" type="password" placeholder="Password">
+          <button class="toggle-pass" type="button" data-toggles="newPass" aria-label="Show password">👁</button>
+        </div>
+        <div class="password-field">
+          <input class="control" id="confirmPass" type="password" placeholder="Confirm your password">
+          <button class="toggle-pass" type="button" data-toggles="confirmPass" aria-label="Show password">👁</button>
         </div>
       </div>
-      <script>
-        const pw = document.getElementById("pw");
-        const btn = document.getElementById("pwToggle");
-
-        btn.addEventListener("click", () => {
-          pw.type = pw.type === "password" ? "text" : "password";
-          btn.textContent = pw.type === "password" ? "👁" : "🙈";
-          console.log("toggled to:", pw.type);
-        });
-      </script>
-      </div>
-
-    
-      <p id="regMsg" style="margin:10px 0 0; color:#c0392b; font-weight:600;"></p>
-  </div>
-
-  <div class="down">
-    <div class="btn">
-      <button type="submit" class="btn1">Create</button>
+      <p class="msg" id="secMsg"></p>
+      <button class="btnPrimary" type="button" id="savePassBtn" style="margin-top:8px">Save</button>
     </div>
 
-    <div class="link">
-      <a href="login.html" class="links">Already have an account?<br><span class="log">login</span></a>
+    <div class="guideFooter">
+      Need help using the VortexBoost website?<br>
+      Watch this video : <a href="support.html">Guide</a>
     </div>
-  </div>
-  </form>
-  </div>
+  </main>
 
-  <div class="main-bottom">
-    <h3 class="first">why <span class="sec">choose</span> <span class="third"> VortexBoost</span><span
-        class="end">?</span></h3>
-    <div class="gallery">
-      <div class="cards">
-        <div class="top">
-          <img src="./Public/Images/thumbs.png" alt="#" class="image img3">
-        </div>
-        <div class="bottom">
-          <div class="line"></div>
-          <p>vortexboosters interface is as easy as ABC. rom account creation to making your first order.</p>
-        </div>
-      </div>
+  <footer class="footerDark">© 2026 VortexBoost. All rights reserved.</footer>
 
-      <div class="cards">
-        <div class="top">
-          <img src="./Public/Images/rocket.png" alt="#" class="image img3">
-        </div>
-        <div class="bottom">
-          <div class="line"></div>
-          <p>Fast delivery and highly reliable services which give you the freedom to focus on other parts of your
-            business.</p>
-        </div>
-      </div>
-
-      <div class="cards">
-        <div class="top">
-          <img src="./Public/Images/support.png" alt="#" class="image img3">
-        </div>
-        <div class="bottom">
-          <div class="line"></div>
-          <p>Our friendly support team is always ready to assist you with any questions or concerns 24/7.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="src/js/account.js"></script>
+  <script src="src/js/config.js"></script>
+  <script src="src/js/app-shell.js"></script>
+  <script src="src/js/account-page.js"></script>
 </body>
-
 </html>
