@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Orders</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/home.css" />
+  <link rel="stylesheet" href="src/css/pages.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="topbar__left">
+        <button class="hamburger" type="button" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="brand">
+          <div class="logo">
+            <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+          </div>
+        </div>
+      </div>
+      <div class="topbar__right">
+        <div class="balance">
+          <a href="payment.html" class="lik" title="Add funds"><span class="balance__plus">+</span></a>
+          <span class="balance__amt">0 XAF</span>
+        </div>
+        <button class="lang" type="button">EN <span class="caret">▼</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="card">
+      <div class="ordersHead">
+        <h2>Orders History</h2>
+        <div class="ordersTools">
+          <select id="statusFilter" aria-label="Filter by status">
+            <option value="">All</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+            <option value="canceled">Canceled</option>
+          </select>
+          <div class="searchBox">
+            <input id="searchInput" type="search" placeholder="Search ID or service">
+            <span class="ico">🔍</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ordersTableWrap">
+        <table class="ordersTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Service</th>
+              <th>Qty</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody"></tbody>
+        </table>
+      </div>
+
+      <div id="ordersEmpty" class="emptyState" hidden>
+        No orders yet.<br>
+        <a href="home.html">Place your first order</a>
+      </div>
+
+      <div class="loadMoreWrap" id="loadMoreWrap" hidden>
+        <button class="loadMore" id="loadMoreBtn" type="button">Load more</button>
+      </div>
+      <p class="noMore center" id="noMore" hidden>No more data to load.</p>
+    </div>
+
+    <div class="guideFooter">
+      Need help using the VortexBoost website?<br>
+      Watch this video : <a href="support.html">Guide</a>
+    </div>
+  </main>
+
+  <footer class="footerDark">© 2026 VortexBoost. All rights reserved.</footer>
+
+  <script src="src/js/config.js"></script>
+  <script src="src/js/app-shell.js"></script>
+  <script src="src/js/orders.js"></script>
+</body>
+</html>

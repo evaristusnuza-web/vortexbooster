@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Add Funds</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/home.css" />
+  <link rel="stylesheet" href="src/css/pages.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="topbar__left">
+        <button class="hamburger" type="button" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="brand">
+          <div class="logo">
+            <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+          </div>
+        </div>
+      </div>
+      <div class="topbar__right">
+        <div class="balance">
+          <a href="payment.html" class="lik" title="Add funds"><span class="balance__plus">+</span></a>
+          <span class="balance__amt">0 XAF</span>
+        </div>
+        <button class="lang" type="button">EN <span class="caret">▼</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <a href="wallet.html" class="backLink">← Wallet</a>
+    <h1 class="payTitle">Add Funds</h1>
+    <p class="paySub">Choose a payment method:</p>
+
+    <div class="methodGrid">
+      <button class="methodCard" type="button" data-method="momo">
+        <span class="methodCard__logo"><img src="./Public/Images/mtn.svg" alt="MTN MoMo"></span>
+        <span class="methodCard__label">MTN Momo</span>
+      </button>
+      <button class="methodCard" type="button" data-method="om">
+        <span class="methodCard__logo"><img src="./Public/Images/om.svg" alt="Orange Money"></span>
+        <span class="methodCard__label">Orange Money</span>
+      </button>
+      <button class="methodCard" type="button" data-method="crypto">
+        <span class="methodCard__logo"><img src="./Public/Images/btc.svg" alt="Crypto"></span>
+        <span class="methodCard__label">BTC/ETH/USDT<br>......</span>
+      </button>
+    </div>
+
+    <!-- MOBILE MONEY FORMS -->
+    <div class="card payForm" id="form-momo">
+      <h2 class="cardTitle mt0">Pay with MTN MoMo</h2>
+      <div class="formRow">
+        <div>
+          <label class="label" for="momoAmount">Amount (XAF):</label>
+          <input class="control" id="momoAmount" type="number" min="100" placeholder="e.g. 1000">
+          <div class="hint">Minimum: 100 XAF</div>
+        </div>
+        <div>
+          <label class="label" for="momoPhone">MTN number:</label>
+          <input class="control" id="momoPhone" type="tel" placeholder="e.g. 9XX XXX XXX" maxlength="13">
+          <div class="hint">Your MTN MoMo number (Cameroon)</div>
+        </div>
+      </div>
+      <p class="msg" id="momoMsg"></p>
+      <button class="btnPrimary" type="button" id="momoPayBtn" style="margin-top:6px">Pay</button>
+    </div>
+
+    <div class="card payForm" id="form-om">
+      <h2 class="cardTitle mt0">Pay with Orange Money</h2>
+      <div class="formRow">
+        <div>
+          <label class="label" for="omAmount">Amount (XAF):</label>
+          <input class="control" id="omAmount" type="number" min="100" placeholder="e.g. 1000">
+          <div class="hint">Minimum: 100 XAF</div>
+        </div>
+        <div>
+          <label class="label" for="omPhone">Orange number:</label>
+          <input class="control" id="omPhone" type="tel" placeholder="e.g. 6XX XXX XXX" maxlength="13">
+          <div class="hint">Your Orange Money number (Cameroon)</div>
+        </div>
+      </div>
+      <p class="msg" id="omMsg"></p>
+      <button class="btnPrimary" type="button" id="omPayBtn" style="margin-top:6px">Pay</button>
+    </div>
+
+    <!-- CRYPTO FORM -->
+    <div class="card payForm" id="form-crypto">
+      <h2 class="cardTitle mt0">Pay with Crypto</h2>
+      <div class="formRow">
+        <div>
+          <label class="label" for="cryptoAmount">Amount (XAF):</label>
+          <input class="control" id="cryptoAmount" type="number" min="100" placeholder="e.g. 1000">
+          <div class="hint">Minimum: 100 XAF</div>
+        </div>
+        <div>
+          <label class="label" for="cryptoCoin">Coin:</label>
+          <select class="control" id="cryptoCoin" style="height:42px">
+            <option value="BTC">Bitcoin (BTC)</option>
+            <option value="ETH">Ethereum (ETH)</option>
+            <option value="USDT">Tether (USDT)</option>
+          </select>
+        </div>
+        <div>
+          <label class="label" for="cryptoAddress">Wallet address:</label>
+          <input class="control" id="cryptoAddress" type="text" placeholder="Paste your wallet address">
+        </div>
+      </div>
+      <p class="msg" id="cryptoMsg"></p>
+      <button class="btnPrimary" type="button" id="cryptoPayBtn" style="margin-top:6px">Pay</button>
+    </div>
+
+    <!-- PAYMENT STATUS (shared) -->
+    <div class="card" id="payStatusCard" hidden>
+      <div class="payStatus">
+        <div class="payStatus__icon" id="payStatusIcon">⏳</div>
+        <div class="payStatus__title" id="payStatusTitle">Waiting for confirmation…</div>
+        <div class="payStatus__ref" id="payStatusRef"></div>
+        <p class="muted" id="payStatusText"></p>
+        <div class="payStatus__actions">
+          <a href="payment.html" class="btnGhost" id="payStatusCancel">Cancel</a>
+          <button class="btnPrimary" type="button" id="payStatusVerify">Verify payment</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cantFind">
+      <a href="support.html" class="linkBtn" style="letter-spacing:.5px">CAN'T FIND YOUR PAYMENT METHOD?</a>
+    </div>
+
+    <div class="guideFooter">
+      Need help using the VortexBoost website?<br>
+      Watch this video : <a href="support.html">Guide</a>
+    </div>
+  </main>
+
+  <footer class="footerDark">© 2026 VortexBoost. All rights reserved.</footer>
+
+  <script src="src/js/config.js"></script>
+  <script src="src/js/app-shell.js"></script>
+  <script src="src/js/payment.js"></script>
+</body>
+</html>

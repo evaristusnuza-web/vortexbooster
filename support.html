@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Support</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/home.css" />
+  <link rel="stylesheet" href="src/css/pages.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="topbar__left">
+        <button class="hamburger" type="button" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="brand">
+          <div class="logo">
+            <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+          </div>
+        </div>
+      </div>
+      <div class="topbar__right">
+        <div class="balance">
+          <a href="payment.html" class="lik" title="Add funds"><span class="balance__plus">+</span></a>
+          <span class="balance__amt">0 XAF</span>
+        </div>
+        <button class="lang" type="button">EN <span class="caret">▼</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="card">
+      <h2 class="cardTitle mt0">Guide</h2>
+      <p class="muted">New here? Watch this video to see how to use the whole site — from adding funds to tracking your orders:</p>
+      <div class="center" style="margin-top:12px">
+        <a class="btnPrimary" href="https://www.youtube.com/watch?v=eEpI0UVHphs" target="_blank" rel="noopener noreferrer">▶ Watch the tutorial</a>
+      </div>
+    </div>
+
+    <div class="card faq">
+      <h2 class="cardTitle mt0">Frequently asked questions</h2>
+
+      <details>
+        <summary>How do I place an order?</summary>
+        <p>Go to <b>Home</b>, pick your social media platform, choose the service (followers, likes, views…) and the quality type, paste your link, enter the quantity and press <b>PURCHASE</b>. Your wallet is charged the shown price and the order starts right away.</p>
+      </details>
+
+      <details>
+        <summary>How do I add funds?</summary>
+        <p>Press the <b>+</b> in the top bar or <b>ADD FUNDS</b> on your Wallet. Choose MTN MoMo, Orange Money or crypto, enter the amount and your number/address, then approve the payment. Your balance is credited as soon as the payment provider confirms it.</p>
+      </details>
+
+      <details>
+        <summary>My order shows “Pending”. Is that normal?</summary>
+        <p>Yes. Pending means the order is being processed. Delivery time depends on the service (it is shown before purchase). You can follow the progress on the <b>Orders</b> page — it refreshes automatically while orders are pending.</p>
+      </details>
+
+      <details>
+        <summary>What happens if my order is canceled?</summary>
+        <p>If the provider cancels an order, the full amount is automatically refunded to your wallet. You will see a green “Refund — Canceled and Refunded” entry in your Wallet activity.</p>
+      </details>
+
+      <details>
+        <summary>Why do I need a public account/post?</summary>
+        <p>Services can only be delivered to public links. Private profiles or non-public posts cannot receive followers or engagement, so the order would fail.</p>
+      </details>
+
+      <details>
+        <summary>What is the difference between Average and High quality?</summary>
+        <p>Average quality is cheaper, starts faster and has a shorter guarantee with more drop. High quality costs more, uses better-looking/real accounts and keeps followers longer. For followers: bots are cheap but don't last; real accounts stay forever and are expensive.</p>
+      </details>
+
+      <details>
+        <summary>How do I use the Referral Program?</summary>
+        <p>Open the <b>Referral Program</b> page and share your code or link. When a referred friend adds funds, you earn a commission on the deposit — it is added to your affiliate balance in the Wallet.</p>
+      </details>
+
+      <details>
+        <summary>Can I use the API?</summary>
+        <p>Yes. Open the <b>API</b> page to generate your personal API key. You can then place and check orders programmatically — see the examples on that page.</p>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2 class="cardTitle mt0">Contact us</h2>
+      <p class="muted" style="margin-top:0">Our friendly support team is ready to assist you 24/7.</p>
+      <div class="refLinkBox" style="margin-top:12px">
+        <span>📧 <b>Email:</b> support@vortexboost.site</span>
+        <span class="muted small">replace with your support address</span>
+      </div>
+      <div class="refLinkBox">
+        <span>💬 <b>WhatsApp:</b> +237 6XX XXX XXX</span>
+        <span class="muted small">replace with your number</span>
+      </div>
+    </div>
+
+    <div class="guideFooter">
+      Still stuck? Email us — we answer fast.<br>
+      Watch this video : <a href="https://www.youtube.com/watch?v=eEpI0UVHphs" target="_blank" rel="noopener noreferrer">Guide</a>
+    </div>
+  </main>
+
+  <footer class="footerDark">© 2026 VortexBoost. All rights reserved.</footer>
+
+  <script src="src/js/config.js"></script>
+  <script src="src/js/app-shell.js"></script>
+  <script>VB.requireLogin().then((ok) => { if (ok) VB.initShell(); });</script>
+</body>
+</html>

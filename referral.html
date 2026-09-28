@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Referral Program</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/home.css" />
+  <link rel="stylesheet" href="src/css/pages.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="topbar__left">
+        <button class="hamburger" type="button" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="brand">
+          <div class="logo">
+            <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+          </div>
+        </div>
+      </div>
+      <div class="topbar__right">
+        <div class="balance">
+          <a href="payment.html" class="lik" title="Add funds"><span class="balance__plus">+</span></a>
+          <span class="balance__amt">0 XAF</span>
+        </div>
+        <button class="lang" type="button">EN <span class="caret">▼</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="card">
+      <h2 class="cardTitle mt0">Referral Program</h2>
+      <p class="muted" id="refRateText">Earn a commission on every deposit made by the people you refer.</p>
+
+      <div class="refCodeBox">
+        <div class="muted">Your referral code</div>
+        <div class="refCode" id="refCode">—</div>
+        <div class="refActions">
+          <button class="btnGhost" type="button" id="copyCodeBtn">Copy code</button>
+        </div>
+      </div>
+
+      <div class="refLinkBox">
+        <span class="muted">Share this link:</span>
+        <span id="refLink">—</span>
+        <button class="btnGhost" type="button" id="copyLinkBtn">Copy link</button>
+      </div>
+
+      <div class="refStats">
+        <div class="refStat">
+          <div class="refStat__k">People referred</div>
+          <div class="refStat__v" id="refCount">0</div>
+        </div>
+        <div class="refStat">
+          <div class="refStat__k">Affiliate balance</div>
+          <div class="refStat__v" id="refEarnings">0 XAF</div>
+        </div>
+      </div>
+
+      <div id="refRecentWrap" hidden style="margin-top:18px">
+        <h3 style="font-size:14px;margin-bottom:10px">Recent commissions</h3>
+        <div class="txList" id="refRecent"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="cardTitle mt0">How it works</h2>
+      <ol class="terms" style="padding-left:20px">
+        <li style="margin-bottom:8px">Share your referral link (or code) with friends.</li>
+        <li style="margin-bottom:8px">They create an account using your link or code.</li>
+        <li style="margin-bottom:8px">Every time they add funds, you earn <b id="howRate">5%</b> of the deposit as affiliate balance.</li>
+        <li>Your affiliate balance is shown in your Wallet.</li>
+      </ol>
+    </div>
+
+    <div class="guideFooter">
+      Need help using the VortexBoost website?<br>
+      Watch this video : <a href="support.html">Guide</a>
+    </div>
+  </main>
+
+  <footer class="footerDark">© 2026 VortexBoost. All rights reserved.</footer>
+
+  <script src="src/js/config.js"></script>
+  <script src="src/js/app-shell.js"></script>
+  <script src="src/js/referral.js"></script>
+</body>
+</html>

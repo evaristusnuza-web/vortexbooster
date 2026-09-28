@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Terms</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/home.css" />
+  <link rel="stylesheet" href="src/css/pages.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="topbar__left">
+        <button class="hamburger" type="button" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="brand">
+          <div class="logo">
+            <img src="./Public/Images/logo.png" alt="vortexboost logo" class="image img1">
+          </div>
+        </div>
+      </div>
+      <div class="topbar__right">
+        <div class="balance">
+          <a href="payment.html" class="lik" title="Add funds"><span class="balance__plus">+</span></a>
+          <span class="balance__amt">0 XAF</span>
+        </div>
+        <button class="lang" type="button">EN <span class="caret">▼</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="card terms">
+      <h1 style="font-size:22px;margin:0 0 6px">Terms of Service</h1>
+      <p class="muted">Last updated: 28 September 2026</p>
+
+      <h2>1. About VortexBoost</h2>
+      <p>VortexBoost is a social media growth service platform. You can purchase followers, likes, views and other engagement services for supported platforms (TikTok, Instagram, Facebook, Telegram, YouTube, WhatsApp and more). By creating an account and placing an order you agree to these terms.</p>
+
+      <h2>2. Accounts</h2>
+      <ul>
+        <li>You must be at least 18 years old to use this service.</li>
+        <li>Keep your login credentials private. You are responsible for all activity under your account.</li>
+        <li>One account per person. We may suspend accounts created in bad faith.</li>
+      </ul>
+
+      <h2>3. Orders & delivery</h2>
+      <ul>
+        <li>Orders are processed after your wallet is debited. Delivery time depends on the service and is shown before purchase.</li>
+        <li>Do not change usernames or make profiles private while an order is in progress, or the order may fail and be canceled.</li>
+        <li>If a provider order is canceled, the full amount is automatically refunded to your wallet.</li>
+        <li>"Average quality" services are cheaper and have a shorter guarantee and higher drop rate; "High quality" services cost more and last longer. You acknowledge and accept this trade-off.</li>
+      </ul>
+
+      <h2>4. Wallet & payments</h2>
+      <ul>
+        <li>You top up your wallet using mobile money (MTN MoMo, Orange Money) or crypto. Wallet credit appears after the payment is confirmed by the payment provider.</li>
+        <li>Wallet balances are non-refundable except for refunds of canceled orders.</li>
+        <li>Pricing is in XAF (Central African CFA franc) and is shown before every purchase.</li>
+      </ul>
+
+      <h2>5. Acceptable use</h2>
+      <ul>
+        <li>Do not use the service on accounts you do not own.</li>
+        <li>Do not attempt to abuse, reverse-engineer or overload the platform or its API.</li>
+        <li>Using engagement services may violate the terms of the social platforms themselves. You use this service at your own risk.</li>
+      </ul>
+
+      <h2>6. Refunds & liability</h2>
+      <ul>
+        <li>We refund canceled orders in full. Completed orders are not refundable, except where the delivered service clearly does not match its description.</li>
+        <li>Our liability is limited to the amount you paid for the specific order in question.</li>
+      </ul>
+
+      <h2>7. Changes</h2>
+      <p>We may update these terms. Continued use of the service after changes means you accept the new terms.</p>
+
+      <h2>8. Contact</h2>
+      <p>Questions? Reach us on the <a href="support.html" class="linkBtn">Support</a> page.</p>
+    </div>
+
+    <div class="guideFooter">
+      Need help using the VortexBoost website?<br>
+      Watch this video : <a href="support.html">Guide</a>
+    </div>
+  </main>
+
+  <footer class="footerDark">© 2026 VortexBoost. All rights reserved.</footer>
+
+  <script src="src/js/config.js"></script>
+  <script src="src/js/app-shell.js"></script>
+  <script>VB.requireLogin().then((ok) => { if (ok) VB.initShell(); });</script>
+</body>
+</html>
