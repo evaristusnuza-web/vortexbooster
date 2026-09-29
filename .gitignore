@@ -6,6 +6,8 @@ node_modules/
 # orders. They must NEVER be committed. They are created/migrated on boot.
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 

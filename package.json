@@ -1,11 +1,13 @@
 {
   "name": "vortexbooster",
   "version": "2.0.0",
-  "description": "VortexBoost — social media boosting site (wallet, orders, CAMPay payments, Simmwiz reselling)",
+  "description": "VortexBoost — social media boosting platform (wallet, orders, CAMPay payments, Simmwiz reselling)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "create-user": "node scripts/create-user.js",
+    "simmwiz-services": "node scripts/simmwiz-services.js",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=22.5.0 <25.0.0"
@@ -17,7 +19,12 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
+    "dotenv": "^18.0.4",
     "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "pg-mem": "^3.0.14"
   }
 }
