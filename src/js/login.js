@@ -1,4 +1,5 @@
-const API_BASE = "https://vortexbooster-3.onrender.com";
+// config.js (loaded before this file) sets window.API_BASE.
+const API_BASE = window.API_BASE || "";
 
 // If already logged in, go to home
 if (localStorage.getItem("token")) {

@@ -1,0 +1,82 @@
+# ============================================================
+#  Render Blueprint for VortexBoost
+#
+#  Single web service: the Express app serves BOTH the API and
+#  the static frontend, so no separate static site is needed.
+#
+#  Deploy: Render Dashboard -> New -> Blueprint -> pick this repo.
+#
+#  !! IMPORTANT — READ BEFORE GOING LIVE !!
+#  ------------------------------------------------------------------
+#  This service uses SQLite (data.db). Render web service filesystems
+#  are EPHEMERAL: all local files are erased on every redeploy, every
+#  restart, and every idle spin-down.
+#
+#  Free web services CANNOT attach a persistent disk (Render limitation).
+#  So on the `free` plan below, ALL user accounts, wallets, orders and
+#  deposits are lost whenever the service restarts or spins down after
+#  15 minutes of inactivity.
+#
+#  Choose ONE before taking real money:
+#    A) Upgrade to a paid plan (starter or higher) and uncomment the
+#       `disk:` block below, OR
+#    B) Port the data layer (db.js) to Render Postgres, and set
+#       DATABASE_URL. See README section "Database options".
+#  ------------------------------------------------------------------
+# ============================================================
+
+services:
+  - type: web
+    name: vortexbooster
+    runtime: node
+    plan: free # see warning above; use "starter"+ if attaching a disk
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # --- Core ---
+      - key: NODE_VERSION
+        value: 24.21.0
+
+      # Render generates a strong random secret for us.
+      - key: JWT_SECRET
+        generateValue: true
+
+      # Your own account email -> unlocks the Owner dashboard on /wallet.html
+      - key: OWNER_EMAIL
+        sync: false
+
+      # --- Simmwiz (upstream SMM provider you resell from) ---
+      # Without these the app runs in DEMO mode: orders are accepted and
+      # fake-completed without ever reaching a provider. See README.
+      - key: SIMMWIZ_API_URL
+        sync: false
+      - key: SIMMWIZ_API_KEY
+        sync: false
+
+      # --- CAMPay (MTN MoMo / Orange Money / Crypto) ---
+      # Without these the payment page returns a friendly
+      # "payments are being configured" error instead of taking money.
+      - key: CAMPAY_BASE_URL
+        value: https://api.campayapp.com/v2
+      - key: CAMPAY_API_KEY
+        sync: false
+      - key: CAMPAY_SECRET
+        sync: false
+      - key: CAMPAY_MERCHANT_ACCOUNT
+        sync: false
+
+      # --- DEV ONLY. NEVER enable in production. ---
+      # "1" credits wallet deposits instantly with NO payment taken.
+      - key: ENABLE_TEST_DEPOSITS
+        value: "0"
+
+    # --- OPTIONAL: persistent disk (requires a PAID plan) ---
+    # Uncomment to make SQLite durable, and point the app at it with
+    # DB_PATH=/var/data/data.db (see README "Database options").
+    # NOTE: free-plan services cannot attach disks.
+    # disk:
+    #   name: vortexbooster-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
