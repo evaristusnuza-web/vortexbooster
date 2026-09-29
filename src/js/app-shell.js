@@ -44,9 +44,12 @@
       return fetch(VB.API + path, Object.assign({}, opts, { headers: headers })).then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (data) {
           if (res.status === 401 && t) {
+            // Session expired or the token was signed with a different
+            // JWT_SECRET. Clear it and send the user somewhere they can
+            // actually log in again — not the marketing page.
             localStorage.removeItem("token");
             VB.loggedOut = true;
-            window.location.href = "index.html";
+            window.location.href = "login.html";
             throw new Error("unauthorized");
           }
           if (!res.ok) {
@@ -64,13 +67,15 @@
       var t = VB.token();
       if (!t) {
         VB.loggedOut = true;
-        window.location.href = "index.html";
+        window.location.href = "login.html";
         return Promise.resolve(false);
       }
       return VB.api("/api/me").then(function (data) {
         VB.user = data.user;
         return true;
       }).catch(function () {
+        // VB.api has already cleared the bad token and redirected to
+        // login.html; just report failure so the caller stops.
         VB.loggedOut = true;
         return false;
       });

@@ -1,18 +1,18 @@
 /* ============================================================
-   API base selector.
+   API base selector.  Loaded FIRST on every page.
 
-   - When the site is served BY the API itself (local dev, this
-     preview, or any single-host deployment) use relative URLs.
-   - Otherwise fall back to the deployed Render backend.
+   The Express server serves BOTH the API and this frontend, so the
+   default is same-origin (""), which is correct for local dev,
+   the Arena preview, and any single-host deployment (Render, etc.).
+
+   To point the frontend at an API on a DIFFERENT host, either:
+     - set <script>window.VORTEX_API_BASE = "https://api.example.com";</script>
+       before this file loads, or
+     - set the constant below.
    ============================================================ */
 (function () {
-  var h = location.hostname;
-  var sameOrigin =
-    h === "localhost" ||
-    h === "127.0.0.1" ||
-    h === "0.0.0.0" ||
-    h.endsWith(".e2b.app") ||
-    h.endsWith(".local") ||
-    location.port === "3000";
-  window.API_BASE = sameOrigin ? "" : "https://vortexbooster-3.onrender.com";
+  var OVERRIDE = ""; // e.g. "https://vortexbooster-api.onrender.com"
+
+  // Allow an inline override or one injected at runtime (e.g. tests, previews).
+  window.API_BASE = window.VORTEX_API_BASE || OVERRIDE || "";
 })();

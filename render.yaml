@@ -1,0 +1,123 @@
+# ============================================================
+#  Render Blueprint for VortexBoost
+#
+#  Deploy: Render Dashboard -> New -> Blueprint -> pick this repo.
+#
+#  One web service serves BOTH the API and the static frontend.
+#
+#  ────────────────────────────────────────────────────────────
+#  DATABASE — pick ONE. This file currently enables OPTION A.
+#  ────────────────────────────────────────────────────────────
+#
+#  Render web-service filesystems are EPHEMERAL. With plain SQLite on
+#  the service disk, every redeploy, restart and idle spin-down erases
+#  all user accounts, wallets, orders and deposits.
+#
+#  A) PostgreSQL  (ENABLED BELOW — works on the free plan)
+#     Durable across restarts and deploys. The free Postgres tier
+#     EXPIRES 30 DAYS AFTER CREATION, after which Render deletes it
+#     (with a 14-day upgrade grace period). Move to a paid Postgres
+#     instance before that if this is a real store.
+#
+#  B) SQLite + persistent disk  (see the commented block at the bottom)
+#     Cheapest to reason about and needs no Postgres. Requires a PAID
+#     web service, because free instances cannot attach disks.
+#
+#  To switch to (B): delete the `databases:` section and the
+#  DATABASE_URL env var below, upgrade `plan`, and uncomment `disk:`
+#  plus DB_PATH.
+#  ────────────────────────────────────────────────────────────
+# ============================================================
+
+databases:
+  - name: vortexbooster-db
+    databaseName: vortexbooster
+    user: vortexbooster
+    plan: free # expires 30 days after creation — see note above
+    postgresMajorVersion: "16"
+    # Frankfurt is the closest Render region to Cameroon. Region is
+    # IMMUTABLE after creation, and the service must share it so the
+    # internal (private-network) connection string resolves.
+    region: frankfurt
+
+services:
+  - type: web
+    name: vortexbooster
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # ---- Core ----
+      # Must satisfy package.json engines (>=22.5.0 <25.0.0)
+      - key: NODE_VERSION
+        value: 24.21.0
+
+      # Render does NOT set this for you. Without it the app runs in
+      # development mode and its production safety checks stay off.
+      - key: NODE_ENV
+        value: production
+
+      # Render generates a strong random secret for us. The app refuses
+      # to start in production without it.
+      - key: JWT_SECRET
+        generateValue: true
+
+      # Your own account email -> unlocks the Owner dashboard on /wallet.html
+      - key: OWNER_EMAIL
+        sync: false
+
+      # ---- Database (option A: Postgres) ----
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vortexbooster-db
+          property: connectionString
+
+      # ---- Simmwiz (upstream SMM provider you resell from) ----
+      # Until both are set, orders are REFUSED (customers are never
+      # charged) rather than silently simulated.
+      - key: SIMMWIZ_API_URL
+        sync: false
+      - key: SIMMWIZ_API_KEY
+        sync: false
+
+      # ---- CAMPay (MTN MoMo / Orange Money / Crypto) ----
+      # Until set, the payment page refuses to take money.
+      - key: CAMPAY_BASE_URL
+        value: https://api.campayapp.com/v2
+      - key: CAMPAY_API_KEY
+        sync: false
+      - key: CAMPAY_SECRET
+        sync: false
+      - key: CAMPAY_MERCHANT_ACCOUNT
+        sync: false
+
+      # ---- Development switches. BOTH MUST STAY 0 HERE.
+      # ENABLE_TEST_DEPOSITS=1 hands out wallet balance with no payment.
+      # ALLOW_DEMO_ORDERS=1 charges customers for orders never delivered.
+      # The app REFUSES TO BOOT in production if either is 1. ----
+      - key: ENABLE_TEST_DEPOSITS
+        value: "0"
+      - key: ALLOW_DEMO_ORDERS
+        value: "0"
+
+      # ---- Optional ----
+      # Only needed if the frontend is hosted on a different domain than
+      # the API. Comma-separated. Same-origin needs nothing here.
+      # - key: CORS_ORIGIN
+      #   sync: false
+
+    # ---- Option B: SQLite on a persistent disk (requires a PAID plan) ----
+    # Uncomment this block AND the DB_PATH env var, and remove the
+    # `databases:` section plus the DATABASE_URL env var above.
+    # disk:
+    #   name: vortexbooster-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
+    #
+    #   envVars (add above):
+    #     - key: DB_PATH
+    #       value: /var/data/data.db

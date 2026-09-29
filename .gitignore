@@ -1,1 +1,33 @@
+# Dependencies
 node_modules/
+
+# --- Databases ---------------------------------------------------------
+# SQLite databases hold real user accounts, password hashes, wallets and
+# orders. They must NEVER be committed. They are created/migrated on boot.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Local database backups
+*.db.bak
+*.db.backup
+
+# --- Environment / secrets --------------------------------------------
+.env
+.env.*
+!.env.example
+
+# --- Logs --------------------------------------------------------------
+*.log
+npm-debug.log*
+
+# --- OS / editor cruft -------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
