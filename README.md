@@ -8,27 +8,66 @@ single Render web service is all you need to deploy.
 
 ---
 
-## Quick start (local)
+## Quick start
 
 ```bash
 npm install
-npm start              # http://localhost:3000
+cp .env.example .env     # optional — sensible dev defaults are built in
+npm start                # http://localhost:3000
 ```
 
 Requires **Node 22.5+** (the app uses the built-in `node:sqlite` module — no
 native compilation, so `npm install` is fast and reliable). Pinned to Node
 24.21.0 via `.node-version`.
 
-Useful dev env vars:
+Then open <http://localhost:3000/register.html>, create an account, and top up
+from the Payment page.
+
+**Reset a password / create an account from the terminal:**
 
 ```bash
-ENABLE_TEST_DEPOSITS=1   # credit deposits instantly, no CAMPay needed — DEV ONLY
-DEMO_ORDER_MS=30000      # how fast the fake provider "completes" orders in demo mode
-JWT_SECRET=dev-secret    # otherwise falls back to an insecure placeholder
+npm run create-user -- --email you@example.com --password secret123 --balance 25000
 ```
 
-Open <http://localhost:3000>, register an account, and use the Payment page to
-top up — with `ENABLE_TEST_DEPOSITS=1` the balance is credited instantly.
+---
+
+## What you still need to add
+
+The app boots and is fully browsable with **no** configuration. It becomes a
+real store once these are set (in `.env` locally, or the Render dashboard):
+
+| What | Variables | Without it |
+|---|---|---|
+| **Payment** | `CAMPAY_API_KEY`, `CAMPAY_SECRET`, `CAMPAY_MERCHANT_ACCOUNT` | The payment page refuses to take money (says "payments are being configured") |
+| **Order fulfilment** | `SIMMWIZ_API_URL`, `SIMMWIZ_API_KEY` | Orders are **refused** — customers are never charged |
+| **Logins** | `JWT_SECRET` | Required in production; the app refuses to boot with the insecure default |
+
+### Ordering the last piece: mapping services to Simmwiz
+
+Even with your Simmwiz key set, each catalog entry needs a numeric provider
+service id before it can be sold. Find them with:
+
+```bash
+npm run simmwiz-services            # list everything your Simmwiz account can resell
+npm run simmwiz-services -- --map   # + suggest an id for each unmapped catalog entry
+```
+
+Then paste the ids you trust into `catalog.json`:
+
+```json
+"avg": {
+  "label": "Average Quality Followers",
+  "pricePer1k": 3200,
+  "costPer1k": 2100,
+  "simmwizService": "1234",
+  "qty": { "min": 100, "max": 100000 },
+  "time": "1 Hour"
+}
+```
+
+Until an entry is mapped it shows as unavailable and orders for it are
+refused — **the customer is not charged**. The startup banner reports how many
+services are mapped.
 
 ---
 
@@ -36,56 +75,66 @@ top up — with `ENABLE_TEST_DEPOSITS=1` the balance is credited instantly.
 
 ```
 .
-├── server.js              # Express API + static file server (all routes)
-├── db.js                  # SQLite access layer (node:sqlite)
-├── catalog.json           # Service catalog — single source of truth for pricing
-├── render.yaml            # Render Blueprint (deploy config)
-├── index.html             # Landing page
-├── login.html             # …plus 11 more pages, served from the repo root
-├── src/
-│   ├── css/               # Stylesheets
-│   └── js/
-│       ├── config.js      # Sets window.API_BASE — loaded first on every page
-│       ├── app-shell.js   # Shared shell: auth guard, side menu, wallet in header
-│       └── *-page.js      # Per-page logic
-├── Public/Images/         # Icons and images
-└── data.db                # SQLite database (gitignored, auto-created on boot)
+├── server.js              # Express API + static file server
+├── db.js                  # Data layer — Postgres OR SQLite, one API
+├── schema.js              # Tables + migrations (shared by server and scripts)
+├── catalog.json           # Service catalog — pricing + Simmwiz ids
+├── render.yaml            # Render Blueprint
+├── scripts/
+│   ├── create-user.js     # create / reset an account from the CLI
+│   └── simmwiz-services.js# list provider services + suggest mappings
+├── test/                  # node:test suites (npm test)
+├── index.html …           # 12 static pages, served from the repo root
+├── src/css/  src/js/
+├── Public/Images/
+└── data.db                # SQLite file — gitignored, auto-created on boot
 ```
 
 Every page loads `src/js/config.js` → `app-shell.js` → its own page script.
 
 ---
 
-## Environment variables
+## Database
 
-| Variable | Required | What it is |
+`db.js` picks its backend automatically:
+
+| Condition | Backend | Durability |
 |---|---|---|
-| `JWT_SECRET` | **yes** | Long random string for signing login tokens |
-| `OWNER_EMAIL` | no | Your account email (default `evaristusnuza@gmail.com`). That account sees the **Owner dashboard** on the Wallet page |
-| `SIMMWIZ_API_URL` | yes* | Simmwiz API endpoint, e.g. `https://www.simmwiz.com/api/v2` |
-| `SIMMWIZ_API_KEY` | yes* | Your Simmwiz API key |
-| `CAMPAY_BASE_URL` | no | Default `https://api.campayapp.com/v2` |
-| `CAMPAY_API_KEY` | yes* | CAMPay `X-Api-Key` |
-| `CAMPAY_SECRET` | yes* | CAMPay `X-Secret-ApiKey` |
-| `CAMPAY_MERCHANT_ACCOUNT` | yes* | Your CAMPay merchant account UUID |
-| `ENABLE_TEST_DEPOSITS` | no | `"1"` = credit deposits instantly, no payment taken. **Never set in production** |
+| `DATABASE_URL` set | **PostgreSQL** | Survives redeploys, restarts and spin-downs on any Render plan |
+| `DATABASE_URL` unset | **SQLite** | Lives at `DB_PATH` (default `./data.db`) |
 
-\* Until these are set the app runs in safe fallback modes:
+Both expose the same `run` / `get` / `all` API, so application code is
+identical either way. Write queries with `?` placeholders; the Postgres side
+rewrites them to `$1, $2, …`, converts `INSERT OR IGNORE` to
+`ON CONFLICT DO NOTHING`, and appends `RETURNING id` so `lastID` works just
+like SQLite's `lastInsertRowid`.
 
-- **Simmwiz not set** → *demo mode*: orders are accepted and marked
-  **completed after ~90 s even though no provider order was ever placed**.
-  ⚠️ This means customers are charged for orders that are never delivered.
-- **CAMPay not set** → the payment page returns a friendly
-  *"payments are being configured"* error instead of accepting money.
+### ⚠️ Render's filesystem is ephemeral
+
+Local files are erased on **every redeploy, restart, and idle spin-down**. With
+plain SQLite on the service disk, that means all users, wallets, orders and
+deposits are lost. Free web services **cannot** attach a persistent disk.
+
+`render.yaml` therefore enables **Postgres** by default. Two options:
+
+- **A — Postgres** (enabled in `render.yaml`, works on the free plan).
+  Durable. ⚠️ The free Postgres tier **expires 30 days after creation** and is
+  then deleted, after a 14-day upgrade grace period.
+- **B — SQLite + persistent disk.** Cheaper to reason about, no Postgres.
+  Requires a **paid** web service. Uncomment the `disk:` block in
+  `render.yaml`, add `DB_PATH=/var/data/data.db`, and remove the `databases:`
+  section plus `DATABASE_URL`.
+
+Without either, treat the deployment as a throwaway demo.
 
 ---
 
 ## Deploying to Render
 
-The repo includes `render.yaml`, so: **Render Dashboard → New → Blueprint →
-select this repo**. Then set the `sync: false` secrets in the dashboard.
+**Render Dashboard → New → Blueprint → pick this repo.** `render.yaml` creates
+the web service and the database, and prompts for the `sync: false` secrets.
 
-Manual setup equivalent:
+Manual equivalent:
 
 | Setting | Value |
 |---|---|
@@ -95,42 +144,83 @@ Manual setup equivalent:
 | Health check path | `/api/health` |
 | Node version | 24.21.0 (via `.node-version`) |
 
+`/api/health` reports real database connectivity, so a broken DB fails the
+deploy instead of serving 500s behind a green check.
+
 Point your CAMPay **webhook URL** at
-`https://<your-render-app>/api/campay/webhook`.
-The site also verifies payments manually, so a missed webhook still resolves
-when the customer presses "Verify payment".
+`https://<your-app>.onrender.com/api/campay/webhook`. Payments are also
+verified on demand, so a missed webhook still resolves when the customer taps
+"Verify payment".
 
-### ⚠️ Database options — read before taking real money
+---
 
-The app stores everything in **SQLite** (`data.db`). Render web-service
-filesystems are **ephemeral**: local files are erased on every redeploy,
-restart, and idle spin-down. Free web services *cannot* attach a persistent
-disk. **As-is on the free tier, this configuration loses all user accounts,
-wallets, orders and deposits on every restart or 15-minute idle spin-down.**
+## Environment variables
 
-Pick one:
+| Variable | Required | Purpose |
+|---|---|---|
+| `JWT_SECRET` | **production** | Signs login tokens. Generate with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
+| `DATABASE_URL` | no | Use Postgres instead of SQLite |
+| `DB_PATH` | no | SQLite file location (use with a persistent disk) |
+| `OWNER_EMAIL` | no | Account that sees the Owner dashboard (default `evaristusnuza@gmail.com`) |
+| `SIMMWIZ_API_URL` | **to sell** | e.g. `https://www.simmwiz.com/api/v2` |
+| `SIMMWIZ_API_KEY` | **to sell** | Your Simmwiz API key |
+| `CAMPAY_API_KEY` / `CAMPAY_SECRET` / `CAMPAY_MERCHANT_ACCOUNT` | **to take money** | CAMPay credentials |
+| `CAMPAY_BASE_URL` | no | Default `https://api.campayapp.com/v2` |
+| `CORS_ORIGIN` | no | Only if the frontend is on a *different* domain. Comma-separated; same-origin needs nothing |
+| `PORT` | no | Default `3000`; Render sets this |
+| `ENABLE_TEST_DEPOSITS` | **dev only** | `1` = credit top-ups instantly with no payment. **App refuses to boot in production with this set** |
+| `ALLOW_DEMO_ORDERS` | **dev only** | `1` = accept orders and fake-complete them with no provider. **App refuses to boot in production with this set** |
+| `DEMO_ORDER_MS` | no | How fast a simulated order completes (default 90000) |
 
-- **A — Persistent disk (smallest change).** Upgrade to a paid plan, uncomment
-  the `disk:` block in `render.yaml`, and set `DB_PATH=/var/data/data.db` so
-  the database lives on the mount.
-- **B — Render Postgres (most robust).** Port `db.js` to Postgres and set
-  `DATABASE_URL`. Data then survives on any plan. Note the free Postgres tier
-  expires 30 days after creation.
-- **C — Accept data loss (demo only).** Fine for a throwaway demo, never for
-  real customers.
+---
 
-`db.js` currently opens `path.join(__dirname, "data.db")`. To support option A,
-make that path env-driven:
+## Safety behaviour
 
-```js
-const DB_FILE = process.env.DB_PATH || path.join(__dirname, "data.db");
+Designed so a half-configured deploy cannot take money it cannot honour:
+
+- **No provider → no charge.** If Simmwiz is unconfigured, or a specific
+  service has no `simmwizService` id, the order is refused with HTTP 503
+  *before* the wallet is touched.
+- **Production refuses to boot** without `JWT_SECRET`, or with
+  `ENABLE_TEST_DEPOSITS=1`, or with `ALLOW_DEMO_ORDERS=1`.
+- **Rate limiting** on login, registration and password change (20 requests /
+  15 min / IP), and on order, deposit and public-API writes (60 / min).
+- **Provider rejections auto-refund** the customer's wallet.
+- **Canceled provider orders auto-refund**, and refunds are idempotent.
+- **Graceful shutdown** on `SIGTERM`/`SIGINT` — Render sends `SIGTERM` on every
+  redeploy, so in-flight requests finish and SQLite flushes cleanly.
+- Stock CORS allows **same-origin only**; no `X-Frame-Options`/CSP framing
+  headers so the site still works inside embedded previews.
+
+---
+
+## Tests
+
+```bash
+npm test
 ```
+
+29 tests, no network or database server required:
+
+- `test/sqlite.test.js` — runs against a **real** SQLite database: schema,
+  re-migration on every boot, legacy-user backfill, unique-constraint
+  behaviour, the atomic wallet debit guard.
+- `test/postgres.test.js` — exercises the Postgres SQL we generate using
+  `pg-mem`, an in-process Postgres emulator: `SERIAL` DDL, `$n` rewriting,
+  `ON CONFLICT DO NOTHING`, `RETURNING id`, and `int8`→`number` coercion.
+
+⚠️ `pg-mem` is not Postgres. It confirms the SQL we emit is Postgres-shaped,
+but the connection layer is only truly proven by deploying against a real
+Render Postgres. Two known emulator gaps are documented in the test file
+(it mis-evaluates `balance - $1` in an `UPDATE SET`, and rejects a repeated
+`CREATE TABLE IF NOT EXISTS`); neither affects real Postgres.
 
 ---
 
 ## Public API
 
-Every customer can generate a personal API key on the **API** page and use:
+Customers generate a key on the **API** page and authenticate with
+`X-Api-Key`:
 
 | Method | Endpoint |
 |---|---|
@@ -138,8 +228,6 @@ Every customer can generate a personal API key on the **API** page and use:
 | `GET` | `/api/public/balance` |
 | `POST` | `/api/public/add` — `{ "service": "tiktok.followers.avg", "link": "…", "quantity": 500 }` |
 | `GET` | `/api/public/status?order=ID` |
-
-Authenticate with an `X-Api-Key` header.
 
 ---
 
@@ -153,28 +241,12 @@ canceled provider order ──► automatic full refund to customer wallet
 your margin = customer price − Simmwiz cost   (see Wallet → Owner dashboard)
 ```
 
-### Wiring the pricing
-
-1. **Sell prices** — edit `catalog.json` (`pricePer1k` per type, in XAF).
-2. **Simmwiz mapping** — paste the numeric **service IDs** from your Simmwiz
-   dashboard into the matching `simmwizService` field in `catalog.json`.
-   ⚠️ **All 26 catalog entries currently have an empty `simmwizService`.**
-   Until they are filled in, no order ever reaches Simmwiz. `costPer1k` is the
-   fallback cost used when the live Simmwiz rate can't be fetched.
-3. **CAMPay** — add MTN MoMo / Orange Money (and crypto) in your CAMPay
-   merchant dashboard, then set the three CAMPay env vars.
-
 ---
 
 ## Security notes
 
-- **Rotate the owner password.** Earlier commits tracked `data.db`, which
-  contained the `evaristusnuza@gmail.com` account and its bcrypt hash. Those
-  files are now untracked and gitignored, but **they remain in Git history**.
-  Change that password, and consider rewriting history
-  (`git filter-repo`) if the repo is public.
-- `ENABLE_TEST_DEPOSITS=1` credits wallets without taking payment. Never set
-  it in production.
-- Known gaps not yet addressed: no rate limiting on `/api/login` or
-  `/api/register`, `cors()` allows all origins, and `JWT_SECRET` falls back to
-  a placeholder instead of failing fast.
+- **Rotate the owner password.** Early commits tracked `data.db`, which
+  contained the `evaristusnuza@gmail.com` account and its bcrypt hash. The
+  file is now untracked and gitignored, but **it remains in Git history**.
+  Change that password; consider `git filter-repo` if the repo is public.
+- `.env` is gitignored — keep real keys out of Git.

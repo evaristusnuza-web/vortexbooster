@@ -1,45 +1,58 @@
 # ============================================================
 #  Render Blueprint for VortexBoost
 #
-#  Single web service: the Express app serves BOTH the API and
-#  the static frontend, so no separate static site is needed.
-#
 #  Deploy: Render Dashboard -> New -> Blueprint -> pick this repo.
 #
-#  !! IMPORTANT — READ BEFORE GOING LIVE !!
-#  ------------------------------------------------------------------
-#  This service uses SQLite (data.db). Render web service filesystems
-#  are EPHEMERAL: all local files are erased on every redeploy, every
-#  restart, and every idle spin-down.
+#  One web service serves BOTH the API and the static frontend.
 #
-#  Free web services CANNOT attach a persistent disk (Render limitation).
-#  So on the `free` plan below, ALL user accounts, wallets, orders and
-#  deposits are lost whenever the service restarts or spins down after
-#  15 minutes of inactivity.
+#  ────────────────────────────────────────────────────────────
+#  DATABASE — pick ONE. This file currently enables OPTION A.
+#  ────────────────────────────────────────────────────────────
 #
-#  Choose ONE before taking real money:
-#    A) Upgrade to a paid plan (starter or higher) and uncomment the
-#       `disk:` block below, OR
-#    B) Port the data layer (db.js) to Render Postgres, and set
-#       DATABASE_URL. See README section "Database options".
-#  ------------------------------------------------------------------
+#  Render web-service filesystems are EPHEMERAL. With plain SQLite on
+#  the service disk, every redeploy, restart and idle spin-down erases
+#  all user accounts, wallets, orders and deposits.
+#
+#  A) PostgreSQL  (ENABLED BELOW — works on the free plan)
+#     Durable across restarts and deploys. The free Postgres tier
+#     EXPIRES 30 DAYS AFTER CREATION, after which Render deletes it
+#     (with a 14-day upgrade grace period). Move to a paid Postgres
+#     instance before that if this is a real store.
+#
+#  B) SQLite + persistent disk  (see the commented block at the bottom)
+#     Cheapest to reason about and needs no Postgres. Requires a PAID
+#     web service, because free instances cannot attach disks.
+#
+#  To switch to (B): delete the `databases:` section and the
+#  DATABASE_URL env var below, upgrade `plan`, and uncomment `disk:`
+#  plus DB_PATH.
+#  ────────────────────────────────────────────────────────────
 # ============================================================
+
+databases:
+  - name: vortexbooster-db
+    databaseName: vortexbooster
+    user: vortexbooster
+    plan: free # expires 30 days after creation — see note above
+    postgresMajorVersion: "16"
 
 services:
   - type: web
     name: vortexbooster
     runtime: node
-    plan: free # see warning above; use "starter"+ if attaching a disk
+    plan: free
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
-      # --- Core ---
+      # ---- Core ----
+      # Must satisfy package.json engines (>=22.5.0 <25.0.0)
       - key: NODE_VERSION
         value: 24.21.0
 
-      # Render generates a strong random secret for us.
+      # Render generates a strong random secret for us. The app refuses
+      # to start in production without it.
       - key: JWT_SECRET
         generateValue: true
 
@@ -47,17 +60,22 @@ services:
       - key: OWNER_EMAIL
         sync: false
 
-      # --- Simmwiz (upstream SMM provider you resell from) ---
-      # Without these the app runs in DEMO mode: orders are accepted and
-      # fake-completed without ever reaching a provider. See README.
+      # ---- Database (option A: Postgres) ----
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vortexbooster-db
+          property: connectionString
+
+      # ---- Simmwiz (upstream SMM provider you resell from) ----
+      # Until both are set, orders are REFUSED (customers are never
+      # charged) rather than silently simulated.
       - key: SIMMWIZ_API_URL
         sync: false
       - key: SIMMWIZ_API_KEY
         sync: false
 
-      # --- CAMPay (MTN MoMo / Orange Money / Crypto) ---
-      # Without these the payment page returns a friendly
-      # "payments are being configured" error instead of taking money.
+      # ---- CAMPay (MTN MoMo / Orange Money / Crypto) ----
+      # Until set, the payment page refuses to take money.
       - key: CAMPAY_BASE_URL
         value: https://api.campayapp.com/v2
       - key: CAMPAY_API_KEY
@@ -67,16 +85,27 @@ services:
       - key: CAMPAY_MERCHANT_ACCOUNT
         sync: false
 
-      # --- DEV ONLY. NEVER enable in production. ---
-      # "1" credits wallet deposits instantly with NO payment taken.
+      # ---- Development switches. The app REFUSES TO BOOT in production
+      #      if either of these is 1. ----
       - key: ENABLE_TEST_DEPOSITS
         value: "0"
+      - key: ALLOW_DEMO_ORDERS
+        value: "0"
 
-    # --- OPTIONAL: persistent disk (requires a PAID plan) ---
-    # Uncomment to make SQLite durable, and point the app at it with
-    # DB_PATH=/var/data/data.db (see README "Database options").
-    # NOTE: free-plan services cannot attach disks.
+      # ---- Optional ----
+      # Only needed if the frontend is hosted on a different domain than
+      # the API. Comma-separated. Same-origin needs nothing here.
+      # - key: CORS_ORIGIN
+      #   sync: false
+
+    # ---- Option B: SQLite on a persistent disk (requires a PAID plan) ----
+    # Uncomment this block AND the DB_PATH env var, and remove the
+    # `databases:` section plus the DATABASE_URL env var above.
     # disk:
     #   name: vortexbooster-data
     #   mountPath: /var/data
     #   sizeGB: 1
+    #
+    #   envVars (add above):
+    #     - key: DB_PATH
+    #       value: /var/data/data.db
