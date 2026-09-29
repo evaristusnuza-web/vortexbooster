@@ -26,6 +26,8 @@
 //   ENABLE_TEST_DEPOSITS      "1" = instantly credit deposits (DEV ONLY)
 // ============================================================
 
+require("dotenv").config({ quiet: true }); // load .env for local dev (no-op on Render)
+
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
@@ -33,18 +35,54 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 const crypto = require("crypto");
 
-// SQLite via Node's built-in node:sqlite (Node >= 22.5, zero native builds)
-const { run, get, all } = require("./db");
+// Data layer: Postgres when DATABASE_URL is set, SQLite otherwise.
+const db = require("./db");
+const { run, get, all } = db;
+const { migrate, genRefCode } = require("./schema");
 
 const app = express();
 
-// For local dev allow all. In production restrict to your frontend domain.
-app.use(cors());
+const IS_PROD = process.env.NODE_ENV === "production";
+
+/* Trust the platform's reverse proxy so req.ip is the real client, not
+   the proxy. Without this, every request on Render (or in a preview)
+   appears to come from one IP and rate limiting would punish all users
+   together. One hop = trust the single proxy in front of us; it appends
+   the true client address and ignores client-supplied spoofing. */
+app.set("trust proxy", 1);
+
+/* ------------------------- CORS -------------------------
+   The frontend is served by this same process, so same-origin
+   requests need no CORS headers at all. Only enable CORS when you
+   actually host the frontend elsewhere (comma-separated list).
+
+   The public API is server-to-server and unaffected either way. */
+const CORS_ORIGIN = (process.env.CORS_ORIGIN || "").trim();
+if (CORS_ORIGIN) {
+  const list = CORS_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean);
+  app.use(cors({ origin: list.includes("*") ? true : list }));
+} else {
+  app.use(cors({ origin: false }));
+}
+
+/* ---------------------- Security headers ----------------------
+   Deliberately NO X-Frame-Options / frame-ancestors: the site is
+   served in embedded previews, and blocking framing would break them. */
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+  next();
+});
+
 app.use(express.json({ limit: "2mb" }));
+app.disable("x-powered-by");
 
 /* ============================ CONFIG ============================ */
+const JWT_SECRET_FALLBACK = "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET";
+
 const CONFIG = {
-  JWT_SECRET: process.env.JWT_SECRET || "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET",
+  JWT_SECRET: process.env.JWT_SECRET || JWT_SECRET_FALLBACK,
   OWNER_EMAIL: (process.env.OWNER_EMAIL || "evaristusnuza@gmail.com").toLowerCase(),
 
   // --- Simmwiz (upstream provider you resell from) ---
@@ -60,6 +98,14 @@ const CONFIG = {
   // DEV ONLY: set "1" to credit deposits instantly without CAMPay.
   ENABLE_TEST_DEPOSITS: process.env.ENABLE_TEST_DEPOSITS === "1",
 
+  // Demo orders: when Simmwiz is not configured, accept orders and fake
+  // "complete" them WITHOUT contacting any provider. Useful for demos —
+  // but it charges customers for work that is never delivered, so it is
+  // OFF by default in production. Never enable it on a live store.
+  ALLOW_DEMO_ORDERS:
+    process.env.ALLOW_DEMO_ORDERS === "1" ||
+    (process.env.ALLOW_DEMO_ORDERS !== "0" && !IS_PROD),
+
   REFERRAL_RATE: 0.05, // 5% of each referred user's deposit
   DEPOSIT_MIN: 100,
   DEPOSIT_MAX: 50000000,
@@ -69,6 +115,67 @@ const CONFIG = {
 const simmwizConfigured = () => Boolean(CONFIG.SIMMWIZ_API_URL && CONFIG.SIMMWIZ_API_KEY);
 const campayConfigured = () => Boolean(CONFIG.CAMPAY_API_KEY && CONFIG.CAMPAY_SECRET && CONFIG.CAMPAY_MERCHANT_ACCOUNT);
 
+/* ==================== STARTUP CONFIG VALIDATION ====================
+   Fail loudly and early rather than booting into an unsafe state. */
+function validateConfig() {
+  const problems = [];
+  const warnings = [];
+
+  if (IS_PROD) {
+    if (!process.env.JWT_SECRET || CONFIG.JWT_SECRET === JWT_SECRET_FALLBACK) {
+      problems.push(
+        "JWT_SECRET is not set. Refusing to start in production with the " +
+          "insecure default — every login token would be forgeable. Set " +
+          "JWT_SECRET to a long random string."
+      );
+    }
+    if (CONFIG.ENABLE_TEST_DEPOSITS) {
+      problems.push(
+        "ENABLE_TEST_DEPOSITS=1 is set while NODE_ENV=production. This " +
+          "credits wallets with real, spendable balance without taking any " +
+          "payment. Unset it (or set it to 0) before deploying."
+      );
+    }
+    if (process.env.ALLOW_DEMO_ORDERS === "1") {
+      problems.push(
+        "ALLOW_DEMO_ORDERS=1 is set while NODE_ENV=production. Orders would " +
+          "be accepted, the customer charged, and then marked completed " +
+          "without any provider ever delivering. Unset it (or set it to 0) " +
+          "before deploying — customers must not be charged for nothing."
+      );
+    }
+  }
+
+  if (!simmwizConfigured()) {
+    if (IS_PROD && !CONFIG.ALLOW_DEMO_ORDERS) {
+      warnings.push(
+        "Simmwiz is NOT configured. Orders will be refused (customers are " +
+          "not charged) until SIMMWIZ_API_URL and SIMMWIZ_API_KEY are set."
+      );
+    } else {
+      warnings.push(
+        "Simmwiz is NOT configured — running in DEMO mode. Orders are " +
+          "accepted and marked completed without ever reaching a provider. " +
+          "Do NOT take real money in this state."
+      );
+    }
+  }
+
+  if (!campayConfigured()) {
+    warnings.push(
+      CONFIG.ENABLE_TEST_DEPOSITS
+        ? "CAMPay is NOT configured — test deposits are enabled, wallets are credited instantly with no payment taken."
+        : "CAMPay is NOT configured — the payment page will refuse to take money."
+    );
+  }
+
+  if (IS_PROD && !CORS_ORIGIN) {
+    // informational: same-origin only is the correct default
+  }
+
+  return { problems, warnings };
+}
+
 /* ============================ CATALOG ============================ */
 const CATALOG_DATA = JSON.parse(require("fs").readFileSync(path.join(__dirname, "catalog.json"), "utf8"));
 
@@ -77,96 +184,9 @@ function getType(platform, service, type) {
   return t || null;
 }
 
-/* ============================ MIGRATION ============================ */
-async function migrate() {
-  await run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      created_at INTEGER NOT NULL
-    )
-  `);
-  // Add columns introduced later (safe no-ops if already present)
-  const cols = [
-    ["country", "TEXT NOT NULL DEFAULT 'Cameroon'"],
-    ["email_verified", "INTEGER NOT NULL DEFAULT 1"],
-    ["api_key", "TEXT"],
-    ["referral_code", "TEXT"],
-    ["referred_by", "INTEGER"],
-  ];
-  for (const [name, def] of cols) {
-    try { await run(`ALTER TABLE users ADD COLUMN ${name} ${def}`); } catch { /* exists */ }
-  }
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS wallets (
-      user_id INTEGER PRIMARY KEY,
-      balance INTEGER NOT NULL DEFAULT 0,
-      affiliate_balance INTEGER NOT NULL DEFAULT 0
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS transactions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      type TEXT NOT NULL,          -- deposit | order | refund | affiliate
-      amount INTEGER NOT NULL,     -- signed, in XAF
-      note TEXT,
-      ref TEXT,
-      created_at INTEGER NOT NULL
-    )
-  `);
-  await run(`CREATE INDEX IF NOT EXISTS idx_tx_user ON transactions(user_id, id)`);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      platform TEXT NOT NULL,
-      service TEXT NOT NULL,
-      type TEXT NOT NULL,
-      service_label TEXT NOT NULL,
-      link TEXT NOT NULL,
-      qty INTEGER NOT NULL,
-      price INTEGER NOT NULL,      -- charged to customer (your selling price)
-      cost INTEGER NOT NULL,       -- what Simmwiz charges you
-      status TEXT NOT NULL,        -- pending | completed | canceled
-      provider_order_id TEXT,
-      remains INTEGER,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    )
-  `);
-  await run(`CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id, id)`);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS deposits (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      reference TEXT UNIQUE NOT NULL,
-      campay_id TEXT,
-      method TEXT NOT NULL,
-      amount INTEGER NOT NULL,
-      status TEXT NOT NULL,        -- created | success | failed
-      created_at INTEGER NOT NULL,
-      completed_at INTEGER
-    )
-  `);
-
-  // Backfill: wallet + referral code for pre-existing users
-  const users = await all(`SELECT id, referral_code FROM users`);
-  for (const u of users) {
-    await run(`INSERT OR IGNORE INTO wallets (user_id) VALUES (?)`, [u.id]);
-    if (!u.referral_code) {
-      await run(`UPDATE users SET referral_code = ? WHERE id = ?`, [genRefCode(), u.id]);
-    }
-  }
-  // Unique index on referral codes (partial so NULLs are fine)
-  await run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_refcode ON users(referral_code) WHERE referral_code IS NOT NULL`);
-}
+/* ============================ SCHEMA ============================
+   Tables are created/migrated by schema.js, which works on both
+   SQLite and Postgres. See migrate() at the bottom of this file. */
 
 /* ============================ TOKENS ============================ */
 function signToken(user) {
@@ -198,8 +218,6 @@ async function loadUser(id) {
 }
 
 const isOwnerOf = (u) => u.email.toLowerCase() === CONFIG.OWNER_EMAIL;
-const genRefCode = () =>
-  crypto.randomBytes(5).toString("hex").toUpperCase().slice(0, 8);
 const randKey = () => crypto.randomBytes(24).toString("hex");
 
 /* ============================ WALLET ============================ */
@@ -311,6 +329,20 @@ async function placeOrder(user, { platform, service, type, link, qty }) {
 
   const price = Math.max(1, Math.round((q / 1000) * typeData.pricePer1k));
 
+  // Decide how this order will actually be fulfilled BEFORE touching the
+  // customer's balance. If we have no way to place it for real, we must
+  // refuse rather than charge for a job that will never be delivered.
+  const liveProvider = simmwizConfigured() && Boolean(typeData.simmwizService);
+  if (!liveProvider && !CONFIG.ALLOW_DEMO_ORDERS) {
+    const e = new Error(
+      simmwizConfigured()
+        ? "This service is temporarily unavailable (no provider mapping). You have not been charged."
+        : "Ordering is temporarily unavailable while we finish setting up our provider. You have not been charged."
+    );
+    e.status = 503;
+    throw e;
+  }
+
   await ensureWallet(user.id);
   const wallet = await get(`SELECT * FROM wallets WHERE user_id = ?`, [user.id]);
   if (wallet.balance < price) {
@@ -332,7 +364,7 @@ async function placeOrder(user, { platform, service, type, link, qty }) {
   // 2) Forward to Simmwiz (or demo)
   let providerOrderId;
   let cost;
-  if (simmwizConfigured() && typeData.simmwizService) {
+  if (liveProvider) {
     try {
       cost = await simmwizCost(typeData, q);
       const res = await simmwizCall({
@@ -387,12 +419,24 @@ setInterval(async () => {
   catch { return; }
   for (const o of pending) {
     try {
-      if (!simmwizConfigured()) {
-        // Demo mode: fake provider completes after DEMO_ORDER_MS
-        if (Date.now() - o.created_at > CONFIG.DEMO_ORDER_MS) await markOrderCompleted(o);
+      // A "demo-" id (or none at all) means this order never reached a real
+      // provider, so there is nothing to poll.
+      const isDemoOrder =
+        !o.provider_order_id || o.provider_order_id.startsWith("demo-");
+
+      if (isDemoOrder) {
+        if (CONFIG.ALLOW_DEMO_ORDERS) {
+          if (Date.now() - o.created_at > CONFIG.DEMO_ORDER_MS) await markOrderCompleted(o);
+        } else {
+          // Demo orders were disabled after this one was placed. Refund
+          // rather than leaving the customer charged for nothing.
+          await markOrderCanceled(o);
+          console.log(`[orders] #${o.id} was a demo order and demo mode is off -> refunded`);
+        }
         continue;
       }
-      if (!o.provider_order_id || o.provider_order_id.startsWith("demo-")) continue;
+
+      if (!simmwizConfigured()) continue;
       const st = await simmwizCall({ action: "status", order: o.provider_order_id });
       const status = String(st.status || "").toLowerCase();
       if (status === "completed") {
@@ -410,8 +454,146 @@ setInterval(async () => {
   }
 }, 30000);
 
+/* ======================= RATE LIMITING =======================
+   Two kinds of limiter:
+
+   - `writeLimiter`  counts every request (order/deposit spam).
+   - `authLimiter`   counts only FAILED attempts, and a successful
+     login clears the counter. This matters because the app sits
+     behind a proxy on Render (and in previews), where many users
+     can share one source IP: counting successes would let one
+     person's typos lock everyone else out.
+
+   Both are in-memory and therefore per-process. A multi-instance
+   deployment would need shared storage (e.g. Redis). */
+
+function rateLimiter({ windowMs, max, message }) {
+  const hits = new Map();
+
+  // Drop expired buckets so the map can't grow without bound.
+  const sweeper = setInterval(() => {
+    const now = Date.now();
+    for (const [key, rec] of hits) if (now > rec.resetAt) hits.delete(key);
+  }, windowMs);
+  if (sweeper.unref) sweeper.unref();
+
+  const clientKey = (req) => req.ip || req.socket?.remoteAddress || "unknown";
+
+  return function (req, res, next) {
+    const key = clientKey(req);
+    const now = Date.now();
+    let rec = hits.get(key);
+
+    if (!rec || now > rec.resetAt) {
+      rec = { count: 0, resetAt: now + windowMs };
+      hits.set(key, rec);
+    }
+
+    rec.count += 1;
+    if (rec.count > max) {
+      const retryAfter = Math.max(1, Math.ceil((rec.resetAt - now) / 1000));
+      res.setHeader("Retry-After", String(retryAfter));
+      return res.status(429).json({
+        error: message || `Too many attempts. Please try again in ${retryAfter}s.`,
+      });
+    }
+    next();
+  };
+}
+
+/**
+ * Failure-counting limiter for credential endpoints.
+ * A successful response wipes the counter for that client, so someone
+ * fumbling their password a few times is never locked out, and a shared
+ * proxy IP is not punished for other users' failures.
+ */
+function authLimiter({ windowMs, max, message }) {
+  const attempts = new Map();
+
+  const sweeper = setInterval(() => {
+    const now = Date.now();
+    for (const [key, rec] of attempts) if (now > rec.resetAt) attempts.delete(key);
+  }, windowMs);
+  if (sweeper.unref) sweeper.unref();
+
+  const clientKey = (req) => req.ip || req.socket?.remoteAddress || "unknown";
+
+  return function (req, res, next) {
+    const key = clientKey(req);
+    const now = Date.now();
+
+    let rec = attempts.get(key);
+    if (rec && now > rec.resetAt) {
+      attempts.delete(key);
+      rec = null;
+    }
+
+    if (rec && rec.count >= max) {
+      const retryAfter = Math.max(1, Math.ceil((rec.resetAt - now) / 1000));
+      res.setHeader("Retry-After", String(retryAfter));
+      return res.status(429).json({
+        error: message || `Too many failed attempts. Please try again in ${retryAfter}s.`,
+      });
+    }
+
+    // Record the outcome by watching the status code of whatever the
+    // handler eventually sends — catches every early return.
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      const code = res.statusCode;
+      if (code >= 200 && code < 300) {
+        attempts.delete(key); // success clears the slate
+      } else if (code === 400 || code === 401 || code === 403 || code === 409) {
+        const cur = attempts.get(key) || { count: 0, resetAt: Date.now() + windowMs };
+        cur.count += 1;
+        attempts.set(key, cur);
+      }
+      return originalJson(body);
+    };
+
+    next();
+  };
+}
+
+// Protects passwords: 25 FAILED attempts per IP per 15 minutes.
+const credentialsLimiter = authLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  message: "Too many failed attempts from this address. Please try again in a few minutes.",
+});
+
+// Stops order/deposit spam without getting in a real user's way.
+const writeLimiter = rateLimiter({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: "Slow down a moment — too many requests.",
+});
+
 /* ============================ ROUTES ============================ */
-app.get("/api/health", (req, res) => res.send("VortexBoost API is running"));
+
+/* Health check — used by Render. Reports real DB connectivity, not just
+   "the process is up", so a broken database surfaces as a failed deploy
+   instead of a green service that 500s on every request. */
+app.get("/api/health", async (req, res) => {
+  const body = {
+    status: "ok",
+    service: "VortexBoost API",
+    database: db.dialect, // "postgres" | "sqlite"
+    uptime: Math.round(process.uptime()),
+    mode: {
+      simmwiz: simmwizConfigured() ? "live" : CONFIG.ALLOW_DEMO_ORDERS ? "demo" : "disabled",
+      campay: campayConfigured() ? "live" : CONFIG.ENABLE_TEST_DEPOSITS ? "test" : "disabled",
+    },
+  };
+  try {
+    await db.ping();
+    return res.json(body);
+  } catch (e) {
+    body.status = "error";
+    body.error = e.message;
+    return res.status(503).json(body);
+  }
+});
 
 // Expose catalog to the frontend (single source of truth)
 app.get("/api/catalog", (req, res) => {
@@ -420,7 +602,7 @@ app.get("/api/catalog", (req, res) => {
 });
 
 /* ---------- Auth ---------- */
-app.post("/api/register", async (req, res) => {
+app.post("/api/register", credentialsLimiter, async (req, res) => {
   const { username, email, password, referral } = req.body || {};
 
   if (!username || !email || !password) {
@@ -460,7 +642,7 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-app.post("/api/login", async (req, res) => {
+app.post("/api/login", credentialsLimiter, async (req, res) => {
   const { identifier, password } = req.body || {};
   if (!identifier || !password) {
     return res.status(400).json({ error: "identifier and password required" });
@@ -521,7 +703,7 @@ app.patch("/api/account", auth, async (req, res) => {
   res.json({ username: fresh.username, country: fresh.country });
 });
 
-app.post("/api/account/password", auth, async (req, res) => {
+app.post("/api/account/password", auth, credentialsLimiter, async (req, res) => {
   const u = await loadUser(req.user.id);
   if (!u) return res.status(401).json({ error: "Invalid token" });
   const { current, password } = req.body || {};
@@ -574,7 +756,7 @@ app.get("/api/wallet/transactions", auth, async (req, res) => {
 });
 
 // Start a CAMPay deposit
-app.post("/api/wallet/deposit", auth, async (req, res) => {
+app.post("/api/wallet/deposit", auth, writeLimiter, async (req, res) => {
   const u = await loadUser(req.user.id);
   if (!u) return res.status(401).json({ error: "Invalid token" });
 
@@ -697,7 +879,7 @@ app.post("/api/campay/webhook", async (req, res) => {
 });
 
 /* ---------- Orders ---------- */
-app.post("/api/orders", auth, async (req, res) => {
+app.post("/api/orders", auth, writeLimiter, async (req, res) => {
   const u = await loadUser(req.user.id);
   if (!u) return res.status(401).json({ error: "Invalid token" });
   const { platform, service, type, link, qty } = req.body || {};
@@ -862,7 +1044,7 @@ app.get("/api/public/balance", publicAuth, async (req, res) => {
   res.json({ balance: w.balance });
 });
 
-app.post("/api/public/add", publicAuth, async (req, res) => {
+app.post("/api/public/add", publicAuth, writeLimiter, async (req, res) => {
   const { service, link, quantity } = req.body || {};
   const parsed = parsePublicKey(service);
   if (!parsed.typeData) return res.status(400).json({ error: "Unknown service key (format: platform.service.type)" });
@@ -909,15 +1091,123 @@ for (const f of SITE_PAGES) {
 }
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 
-/* ---------- Boot ---------- */
+/* ============================ BOOT ============================ */
+
+// How many catalog entries have no Simmwiz service id yet?
+function catalogReadiness() {
+  let total = 0;
+  let unmapped = 0;
+  for (const [pKey, p] of Object.entries(CATALOG_DATA)) {
+    if (pKey.startsWith("_")) continue;
+    for (const s of Object.values(p.services || {})) {
+      for (const t of Object.values(s.types || {})) {
+        if (!t.pricePer1k || t.pricePer1k <= 0) continue; // not sellable
+        total += 1;
+        if (!t.simmwizService) unmapped += 1;
+      }
+    }
+  }
+  return { total, unmapped };
+}
+
+function printBanner(port, listening = true) {
+  const { problems, warnings } = validateConfig();
+  const ready = catalogReadiness();
+  const line = "─".repeat(64);
+
+  console.log(line);
+  console.log("  VortexBoost");
+  console.log(line);
+  console.log(
+    `  Listening       ${listening ? `http://localhost:${port}` : "— (not started)"}`
+  );
+  console.log(`  Environment     ${IS_PROD ? "production" : "development"}`);
+  console.log(
+    `  Database        ${db.dialect}${db.file ? ` (${db.file})` : ""}`
+  );
+  console.log(
+    `  Simmwiz         ${simmwizConfigured() ? "LIVE" : CONFIG.ALLOW_DEMO_ORDERS ? "DEMO (no real orders)" : "DISABLED (orders refused)"}`
+  );
+  console.log(
+    `  CAMPay          ${campayConfigured() ? "LIVE" : CONFIG.ENABLE_TEST_DEPOSITS ? "TEST (instant credit, no payment)" : "DISABLED (deposits refused)"}`
+  );
+  console.log(
+    `  Owner email     ${CONFIG.OWNER_EMAIL}`
+  );
+  console.log(
+    `  Catalog         ${ready.total - ready.unmapped}/${ready.total} services mapped to a provider`
+  );
+
+  if (warnings.length) {
+    console.log(line);
+    for (const w of warnings) console.log(`  !  ${w}`);
+  }
+  if (problems.length) {
+    console.log(line);
+    for (const p of problems) console.log(`  X  ${p}`);
+  }
+  console.log(line);
+
+  return problems;
+}
+
 const PORT = process.env.PORT || 3000;
+let httpServer = null;
+let shuttingDown = false;
+
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`\n[shutdown] received ${signal} — closing down cleanly…`);
+
+  const force = setTimeout(() => {
+    console.error("[shutdown] took too long, forcing exit");
+    process.exit(1);
+  }, 10000);
+  force.unref();
+
+  try {
+    if (httpServer) {
+      await new Promise((resolve) => httpServer.close(resolve));
+    }
+    await db.close();
+    console.log("[shutdown] done");
+    process.exit(0);
+  } catch (e) {
+    console.error("[shutdown] error:", e.message);
+    process.exit(1);
+  }
+}
+
+// Render sends SIGTERM on every deploy/restart. Closing cleanly makes sure
+// in-flight requests finish and SQLite flushes to disk.
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 migrate()
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`VortexBoost running on http://localhost:${PORT}`);
-      console.log(simmwizConfigured() ? "[simmwiz] LIVE mode" : "[simmwiz] DEMO mode (set SIMMWIZ_API_URL + SIMMWIZ_API_KEY to go live)");
-      console.log(campayConfigured() ? "[campay] LIVE mode" : CONFIG.ENABLE_TEST_DEPOSITS ? "[campay] TEST deposits enabled (instant credit)" : "[campay] NOT configured (set CAMPAY_API_KEY, CAMPAY_SECRET, CAMPAY_MERCHANT_ACCOUNT)");
+    const { problems } = validateConfig();
+
+    // Report problems BEFORE claiming to be listening.
+    printBanner(PORT, problems.length === 0);
+
+    if (problems.length) {
+      console.error(
+        "\nRefusing to start: fix the configuration errors above.\n"
+      );
+      process.exit(1);
+    }
+
+    httpServer = app.listen(PORT, "0.0.0.0", () => {
       if (simmwizConfigured()) refreshSimmwizRates();
+
+      const { unmapped, total } = catalogReadiness();
+      if (simmwizConfigured() && unmapped > 0) {
+        console.warn(
+          `[catalog] ${unmapped}/${total} sellable services have no simmwizService id — ` +
+            `those will be refused until mapped. Run: npm run simmwiz-services`
+        );
+      }
     });
   })
   .catch((e) => {
