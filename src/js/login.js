@@ -1,10 +1,28 @@
 // config.js (loaded before this file) sets window.API_BASE.
 const API_BASE = window.API_BASE || "";
 
-// If already logged in, go to home
-if (localStorage.getItem("token")) {
-  window.location.href = "home.html";
-}
+// If we already hold a *valid* session, skip straight to the app.
+// Checking the token rather than trusting its mere presence avoids a
+// redirect loop when a stale token (e.g. one signed with an old
+// JWT_SECRET) is still sitting in localStorage.
+(function () {
+  const t = localStorage.getItem("token");
+  if (!t) return;
+
+  fetch((window.API_BASE || "") + "/api/me", {
+    headers: { Authorization: "Bearer " + t },
+  })
+    .then((res) => {
+      if (res.ok) {
+        window.location.href = "home.html";
+      } else {
+        localStorage.removeItem("token"); // stale — stay here and log in
+      }
+    })
+    .catch(() => {
+      /* offline or backend down — stay on the login page */
+    });
+})();
 
 const form = document.getElementById("loginForm");
 const msg = document.getElementById("loginMsg");
