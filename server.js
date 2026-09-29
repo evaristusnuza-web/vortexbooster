@@ -98,13 +98,13 @@ const CONFIG = {
   // DEV ONLY: set "1" to credit deposits instantly without CAMPay.
   ENABLE_TEST_DEPOSITS: process.env.ENABLE_TEST_DEPOSITS === "1",
 
-  // Demo orders: when Simmwiz is not configured, accept orders and fake
-  // "complete" them WITHOUT contacting any provider. Useful for demos —
-  // but it charges customers for work that is never delivered, so it is
-  // OFF by default in production. Never enable it on a live store.
-  ALLOW_DEMO_ORDERS:
-    process.env.ALLOW_DEMO_ORDERS === "1" ||
-    (process.env.ALLOW_DEMO_ORDERS !== "0" && !IS_PROD),
+  // Demo orders: accept orders and fake "complete" them WITHOUT contacting
+  // any provider — which charges customers for work that is never delivered.
+  //
+  // Explicit opt-in only. Deploying without it means orders are refused and
+  // nobody is charged, which is the safe default. Set ALLOW_DEMO_ORDERS=1 in
+  // your local .env when you want to click through the order flow.
+  ALLOW_DEMO_ORDERS: process.env.ALLOW_DEMO_ORDERS === "1",
 
   REFERRAL_RATE: 0.05, // 5% of each referred user's deposit
   DEPOSIT_MIN: 100,
@@ -146,17 +146,27 @@ function validateConfig() {
     }
   }
 
+  if (!process.env.NODE_ENV) {
+    warnings.push(
+      "NODE_ENV is not set — running in development mode, so the production " +
+        "safety checks are NOT active. Render does not set this for you; set " +
+        "NODE_ENV=production on any deployment that takes real money."
+    );
+  }
+
   if (!simmwizConfigured()) {
-    if (IS_PROD && !CONFIG.ALLOW_DEMO_ORDERS) {
-      warnings.push(
-        "Simmwiz is NOT configured. Orders will be refused (customers are " +
-          "not charged) until SIMMWIZ_API_URL and SIMMWIZ_API_KEY are set."
-      );
-    } else {
+    if (CONFIG.ALLOW_DEMO_ORDERS) {
       warnings.push(
         "Simmwiz is NOT configured — running in DEMO mode. Orders are " +
           "accepted and marked completed without ever reaching a provider. " +
           "Do NOT take real money in this state."
+      );
+    } else {
+      warnings.push(
+        "Simmwiz is NOT configured. Orders will be refused (customers are " +
+          "not charged) until SIMMWIZ_API_URL and SIMMWIZ_API_KEY are set. " +
+          "Set ALLOW_DEMO_ORDERS=1 in your local .env to simulate orders " +
+          "during development."
       );
     }
   }

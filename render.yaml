@@ -35,12 +35,17 @@ databases:
     user: vortexbooster
     plan: free # expires 30 days after creation — see note above
     postgresMajorVersion: "16"
+    # Frankfurt is the closest Render region to Cameroon. Region is
+    # IMMUTABLE after creation, and the service must share it so the
+    # internal (private-network) connection string resolves.
+    region: frankfurt
 
 services:
   - type: web
     name: vortexbooster
     runtime: node
     plan: free
+    region: frankfurt
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
@@ -50,6 +55,11 @@ services:
       # Must satisfy package.json engines (>=22.5.0 <25.0.0)
       - key: NODE_VERSION
         value: 24.21.0
+
+      # Render does NOT set this for you. Without it the app runs in
+      # development mode and its production safety checks stay off.
+      - key: NODE_ENV
+        value: production
 
       # Render generates a strong random secret for us. The app refuses
       # to start in production without it.
@@ -85,8 +95,10 @@ services:
       - key: CAMPAY_MERCHANT_ACCOUNT
         sync: false
 
-      # ---- Development switches. The app REFUSES TO BOOT in production
-      #      if either of these is 1. ----
+      # ---- Development switches. BOTH MUST STAY 0 HERE.
+      # ENABLE_TEST_DEPOSITS=1 hands out wallet balance with no payment.
+      # ALLOW_DEMO_ORDERS=1 charges customers for orders never delivered.
+      # The app REFUSES TO BOOT in production if either is 1. ----
       - key: ENABLE_TEST_DEPOSITS
         value: "0"
       - key: ALLOW_DEMO_ORDERS
