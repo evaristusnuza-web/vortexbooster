@@ -3,8 +3,7 @@
 //  Express + SQLite + JWT + bcrypt
 //
 //  Reseller flow:
-//   1. Customer tops up their wallet via CAMPay (MTN MoMo /
-//      Orange Money / Crypto).
+//  1. Customer tops up their wallet via CAMPay (MTN MoMo / Orange Money).
 //   2. Customer places an order -> wallet is debited at YOUR
 //      selling price (catalog.json).
 //   3. The same order is forwarded to Simmwiz (upstream) via
@@ -19,10 +18,8 @@
 //   OWNER_EMAIL               your account email (sees margin stats)
 //   SIMMWIZ_API_URL           e.g. https://www.simmwiz.com/api/v2
 //   SIMMWIZ_API_KEY           your Simmwiz API key
-//   CAMPAY_BASE_URL           https://api.campayapp.com/v2 (default)
-//   CAMPAY_API_KEY            CAMPay X-Api-Key
-//   CAMPAY_SECRET             CAMPay X-Secret-ApiKey
-//   CAMPAY_MERCHANT_ACCOUNT   CAMPay merchant account uuid
+//   CAMPAY_BASE_URL           https://demo.campay.net/api/ (default, sandbox)
+//   CAMPAY_PERMANENT_TOKEN    CAMPay permanent token for auth
 //   ENABLE_TEST_DEPOSITS      "1" = instantly credit deposits (DEV ONLY)
 // ============================================================
 
@@ -89,11 +86,9 @@ const CONFIG = {
   SIMMWIZ_API_URL: process.env.SIMMWIZ_API_URL || "",
   SIMMWIZ_API_KEY: process.env.SIMMWIZ_API_KEY || "",
 
-  // --- CAMPay (MTN MoMo, Orange Money, Crypto) ---
-  CAMPAY_BASE_URL: process.env.CAMPAY_BASE_URL || "https://api.campayapp.com/v2",
-  CAMPAY_API_KEY: process.env.CAMPAY_API_KEY || "",
-  CAMPAY_SECRET: process.env.CAMPAY_SECRET || "",
-  CAMPAY_MERCHANT_ACCOUNT: process.env.CAMPAY_MERCHANT_ACCOUNT || "",
+  // --- CAMPay (MTN MoMo, Orange Money) ---
+  CAMPAY_BASE_URL: process.env.CAMPAY_BASE_URL || "https://demo.campay.net/api/",
+  CAMPAY_PERMANENT_TOKEN: process.env.CAMPAY_PERMANENT_TOKEN || "",
 
   // DEV ONLY: set "1" to credit deposits instantly without CAMPay.
   ENABLE_TEST_DEPOSITS: process.env.ENABLE_TEST_DEPOSITS === "1",
@@ -113,7 +108,7 @@ const CONFIG = {
 };
 
 const simmwizConfigured = () => Boolean(CONFIG.SIMMWIZ_API_URL && CONFIG.SIMMWIZ_API_KEY);
-const campayConfigured = () => Boolean(CONFIG.CAMPAY_API_KEY && CONFIG.CAMPAY_SECRET && CONFIG.CAMPAY_MERCHANT_ACCOUNT);
+const campayConfigured = () => Boolean(CONFIG.CAMPAY_PERMANENT_TOKEN);
 
 /* ==================== STARTUP CONFIG VALIDATION ====================
    Fail loudly and early rather than booting into an unsafe state. */
@@ -309,14 +304,13 @@ async function campayCall(method, urlPath, body) {
     method,
     headers: {
       "Content-Type": "application/json",
-      "X-Api-Key": CONFIG.CAMPAY_API_KEY,
-      "X-Secret-ApiKey": CONFIG.CAMPAY_SECRET,
+      "Authorization": `Token ${CONFIG.CAMPAY_PERMANENT_TOKEN}`,
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-  const data = await res.json().catch(() => ({ success: false, message: "Invalid CAMPay response" }));
-  if (!data.success) throw new Error(data.message || "CAMPay error");
-  return data.data;
+  const data = await res.json().catch(() => ({ error: "Invalid CAMPay response" }));
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
 /* ============================ ORDER ENGINE ============================ */
@@ -770,21 +764,18 @@ app.post("/api/wallet/deposit", auth, writeLimiter, async (req, res) => {
   const u = await loadUser(req.user.id);
   if (!u) return res.status(401).json({ error: "Invalid token" });
 
-  const { method, amount, phone, coin, address } = req.body || {};
+  const { method, amount, phone } = req.body || {};
   const amt = Math.round(Number(amount));
 
-  if (!["momo", "om", "crypto"].includes(method)) {
-    return res.status(400).json({ error: "Choose a payment method (momo, om or crypto)" });
+  // Only MoMo and Orange Money supported - no crypto
+  if (!["momo", "om"].includes(method)) {
+    return res.status(400).json({ error: "Choose a payment method (momo or om)" });
   }
   if (!Number.isFinite(amt) || amt < CONFIG.DEPOSIT_MIN || amt > CONFIG.DEPOSIT_MAX) {
     return res.status(400).json({ error: `Amount must be between ${CONFIG.DEPOSIT_MIN} and ${CONFIG.DEPOSIT_MAX} XAF` });
   }
-  if (method !== "crypto") {
-    const p = String(phone || "").replace(/[\s-]/g, "");
-    if (!/^\d{8,13}$/.test(p)) return res.status(400).json({ error: "Enter a valid phone number" });
-  } else if (!coin || !address) {
-    return res.status(400).json({ error: "Coin and wallet address are required" });
-  }
+  const p = String(phone || "").replace(/[\s-]/g, "");
+  if (!/^\d{8,13}$/.test(p)) return res.status(400).json({ error: "Enter a valid phone number" });
   if (!CONFIG.ENABLE_TEST_DEPOSITS && !campayConfigured()) {
     return res.status(503).json({ error: "Payments are being configured. Please try again a bit later." });
   }
@@ -802,25 +793,16 @@ app.post("/api/wallet/deposit", auth, writeLimiter, async (req, res) => {
     return res.json({ reference, status: "SUCCESS", test: true });
   }
 
-  // REAL CAMPay flow
-  // NOTE: field names follow CAMPay v2 docs (api.campayapp.com). Adjust
-  // `network`/`coin` values to match the exact options in your CAMPay
-  // merchant dashboard if they differ.
+  // REAL CAMPay flow - new API at campay.net
+  // POST /collect/ with {amount, currency, from, description, external_reference}
   let data;
   try {
-    data = await campayCall("POST", "/transaction/", {
-      merchant_account: CONFIG.CAMPAY_MERCHANT_ACCOUNT,
-      customer: {
-        name: u.username,
-        email: u.email,
-        phone: method !== "crypto" ? { country_code: "CM", number: String(phone).replace(/[\s-]/g, "") } : undefined,
-        address: method === "crypto" ? String(address) : undefined,
-        coin: method === "crypto" ? String(coin) : undefined,
-      },
+    data = await campayCall("POST", "/collect/", {
       amount: amt,
       currency: "XAF",
-      network: method === "crypto" ? "crypto" : method, // "momo" | "om"
-      reference,
+      from: p, // phone number
+      description: `Wallet top-up for ${u.username}`,
+      external_reference: reference,
     });
   } catch (e) {
     return res.status(502).json({ error: "Could not start payment: " + e.message });
@@ -828,13 +810,13 @@ app.post("/api/wallet/deposit", auth, writeLimiter, async (req, res) => {
 
   const ins = await run(
     `INSERT INTO deposits (user_id, reference, campay_id, method, amount, status, created_at) VALUES (?,?,?,?,?,?,?)`,
-    [u.id, reference, String(data.id), method, amt, "created", now]
+    [u.id, reference, String(data.id || data.reference || reference), method, amt, "created", now]
   );
 
   res.json({
     reference,
     status: "CREATED",
-    redirectUrl: data.redirect_url || null, // open to let the customer approve on their phone
+    redirectUrl: data.redirect_url || data.checkout_url || null, // open to let the customer approve on their phone
   });
 });
 
@@ -851,7 +833,8 @@ app.get("/api/wallet/deposit/:reference", auth, async (req, res) => {
   if (CONFIG.ENABLE_TEST_DEPOSITS) return res.json({ reference: dep.reference, status: "SUCCESS", credited: true });
 
   try {
-    const data = await campayCall("GET", `/transaction/${dep.campay_id}`);
+    // New API: GET /transaction/<ref>/
+    const data = await campayCall("GET", `/transaction/${dep.campay_id}/`);
     const st = String(data.status || "").toUpperCase();
     if (st === "SUCCESS") {
       await completeDeposit(dep, "Payment received");
@@ -876,7 +859,7 @@ app.post("/api/campay/webhook", async (req, res) => {
         ? await get(`SELECT * FROM deposits WHERE reference = ? AND status != 'success'`, [String(id).toUpperCase()])
         : await get(`SELECT * FROM deposits WHERE campay_id = ? AND status != 'success'`, [String(id)]);
       if (dep) {
-        const data = await campayCall("GET", `/transaction/${dep.campay_id}`);
+        const data = await campayCall("GET", `/transaction/${dep.campay_id}/`);
         const st = String(data.status || "").toUpperCase();
         if (st === "SUCCESS") await completeDeposit(dep, "Payment received");
         else if (st === "FAILED" || st === "CANCELLED") await run(`UPDATE deposits SET status='failed' WHERE id=?`, [dep.id]);

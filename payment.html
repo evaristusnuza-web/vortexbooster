@@ -47,10 +47,6 @@
         <span class="methodCard__logo"><img src="./Public/Images/om.svg" alt="Orange Money"></span>
         <span class="methodCard__label">Orange Money</span>
       </button>
-      <button class="methodCard" type="button" data-method="crypto">
-        <span class="methodCard__logo"><img src="./Public/Images/btc.svg" alt="Crypto"></span>
-        <span class="methodCard__label">BTC/ETH/USDT<br>......</span>
-      </button>
     </div>
 
     <!-- MOBILE MONEY FORMS -->
@@ -88,32 +84,6 @@
       </div>
       <p class="msg" id="omMsg"></p>
       <button class="btnPrimary" type="button" id="omPayBtn" style="margin-top:6px">Pay</button>
-    </div>
-
-    <!-- CRYPTO FORM -->
-    <div class="card payForm" id="form-crypto">
-      <h2 class="cardTitle mt0">Pay with Crypto</h2>
-      <div class="formRow">
-        <div>
-          <label class="label" for="cryptoAmount">Amount (XAF):</label>
-          <input class="control" id="cryptoAmount" type="number" min="100" placeholder="e.g. 1000">
-          <div class="hint">Minimum: 100 XAF</div>
-        </div>
-        <div>
-          <label class="label" for="cryptoCoin">Coin:</label>
-          <select class="control" id="cryptoCoin" style="height:42px">
-            <option value="BTC">Bitcoin (BTC)</option>
-            <option value="ETH">Ethereum (ETH)</option>
-            <option value="USDT">Tether (USDT)</option>
-          </select>
-        </div>
-        <div>
-          <label class="label" for="cryptoAddress">Wallet address:</label>
-          <input class="control" id="cryptoAddress" type="text" placeholder="Paste your wallet address">
-        </div>
-      </div>
-      <p class="msg" id="cryptoMsg"></p>
-      <button class="btnPrimary" type="button" id="cryptoPayBtn" style="margin-top:6px">Pay</button>
     </div>
 
     <!-- PAYMENT STATUS (shared) -->

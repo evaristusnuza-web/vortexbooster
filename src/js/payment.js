@@ -1,11 +1,10 @@
-/* Payment page: CAMPay (MTN MoMo / Orange Money / Crypto) top-up */
+/* Payment page: CAMPay (MTN MoMo / Orange Money) top-up */
 let activeMethod = null;
 let polling = null;
 
 const METHODS = {
-  momo:   { form: "form-momo",   amount: "momoAmount",   extra: "momoPhone",   msg: "momoMsg",   btn: "momoPayBtn" },
-  om:     { form: "form-om",     amount: "omAmount",     extra: "omPhone",     msg: "omMsg",     btn: "omPayBtn" },
-  crypto: { form: "form-crypto", amount: "cryptoAmount", extra: "cryptoAddress", msg: "cryptoMsg", btn: "cryptoPayBtn", coin: "cryptoCoin" },
+  momo: { form: "form-momo", amount: "momoAmount", extra: "momoPhone", msg: "momoMsg", btn: "momoPayBtn" },
+  om:   { form: "form-om",   amount: "omAmount",   extra: "omPhone",   msg: "omMsg",   btn: "omPayBtn" },
 };
 
 function showMsg(id, text, kind) {
@@ -50,17 +49,11 @@ async function startDeposit(method) {
   const amount = Math.round(Number(document.getElementById(m.amount).value || 0));
   const body = { method, amount };
 
-  if (method !== "crypto") {
-    const phone = document.getElementById(m.extra).value.trim();
-    if (!/^\d{8,13}$/.test(phone.replace(/[\s-]/g, ""))) {
-      return showMsg(m.msg, "Enter a valid phone number.", "error");
-    }
-    body.phone = phone;
-  } else {
-    body.coin = document.getElementById("cryptoCoin").value;
-    body.address = document.getElementById("cryptoAddress").value.trim();
-    if (!body.address) return showMsg(m.msg, "Enter your wallet address.", "error");
+  const phone = document.getElementById(m.extra).value.trim();
+  if (!/^\d{8,13}$/.test(phone.replace(/[\s-]/g, ""))) {
+    return showMsg(m.msg, "Enter a valid phone number.", "error");
   }
+  body.phone = phone;
 
   if (!amount || amount < 100) {
     return showMsg(m.msg, "Minimum amount is 100 XAF.", "error");
@@ -83,9 +76,7 @@ async function startDeposit(method) {
     } else {
       showStatus({
         reference: data.reference, status: "CREATED", icon: "📱", done: false,
-        text: method === "crypto"
-          ? "Send the exact equivalent of " + VB.fmtXAF(amount) + " in " + body.coin + " to the address shown in your CAMPay confirmation. We will detect the payment automatically."
-          : "A payment prompt has been sent to your phone. Approve it, then verify your payment below.",
+        text: "A payment prompt has been sent to your phone. Approve it, then verify your payment below.",
       });
       startPolling(data.reference);
     }
@@ -133,7 +124,6 @@ VB.requireLogin().then((ok) => {
   });
   document.getElementById("momoPayBtn").addEventListener("click", () => startDeposit("momo"));
   document.getElementById("omPayBtn").addEventListener("click", () => startDeposit("om"));
-  document.getElementById("cryptoPayBtn").addEventListener("click", () => startDeposit("crypto"));
 
   document.getElementById("payStatusVerify").addEventListener("click", async () => {
     const ref = document.getElementById("payStatusRef").textContent;
